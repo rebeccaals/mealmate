@@ -21,7 +21,7 @@ const sidebars: SidebarsConfig = {
     {
       type: 'category',
       label: 'Development',
-      items: ['development/getting-started', 'development/docker', 'development/dev-log'],
+      items: ['development/getting-started', 'development/docker', 'development/dev-log', 'development/implementation-plan'],
     },
     'glossary',
   ],
