@@ -18,7 +18,12 @@ const sidebars: SidebarsConfig = {
         'decisions/adr-004-shared-data-model',
       ],
     },
-    'development/getting-started',
+    {
+      type: 'category',
+      label: 'Development',
+      items: ['development/getting-started', 'development/docker'],
+    },
+    'glossary',
   ],
 }
 

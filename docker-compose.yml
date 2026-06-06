@@ -20,10 +20,10 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "5000:5000"
+      - "5001:5001"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ASPNETCORE_URLS=http://+:5000
+      - ASPNETCORE_URLS=http://+:5001
       - ConnectionStrings__DefaultConnection=Host=postgres;Database=mealmate;Username=mealmate;Password=mealmate_dev
       - Jwt__Key=local-dev-secret-change-in-production
       - Jwt__Issuer=mealmate

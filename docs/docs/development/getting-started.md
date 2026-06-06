@@ -24,8 +24,8 @@ docker compose up
 ```
 
 - Frontend: http://localhost:3000
-- Backend API: http://localhost:5000
-- Swagger UI: http://localhost:5000/swagger
+- Backend API: http://localhost:5001
+- Swagger UI: http://localhost:5001/swagger
 
 ### Option 2: Run services individually
 

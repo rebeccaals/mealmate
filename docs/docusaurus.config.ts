@@ -4,11 +4,11 @@ import type * as Preset from '@docusaurus/preset-classic'
 const config: Config = {
   title: 'Mealmate',
   tagline: 'System documentation',
-  url: 'https://your-github-username.github.io',
+  url: 'https://rebeccaals.github.io',
   baseUrl: '/mealmate/',
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
-  organizationName: 'your-github-username',
+  organizationName: 'rebeccaals',
   projectName: 'mealmate',
   trailingSlash: false,
 
@@ -33,7 +33,7 @@ const config: Config = {
       title: 'mealmate docs',
       items: [
         {
-          href: 'https://github.com/your-github-username/mealmate',
+          href: 'https://github.com/rebeccaals/mealmate',
           label: 'GitHub',
           position: 'right',
         },

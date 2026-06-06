@@ -4,11 +4,11 @@ RUN npm install -g pnpm
 WORKDIR /app
 
 # Copy workspace manifests first for better layer caching
-COPY pnpm-workspace.yaml package.json ./
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY packages/schemas/package.json ./packages/schemas/
 COPY frontend/package.json ./frontend/
 
-RUN pnpm install --frozen-lockfile
+RUN pnpm config set minimum-release-age 0 && pnpm install --frozen-lockfile
 
 COPY packages/schemas ./packages/schemas
 COPY frontend ./frontend
