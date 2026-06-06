@@ -1,0 +1,15 @@
+{
+  "name": "mealmate",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter frontend dev",
+    "build": "pnpm --filter @mealmate/schemas build && pnpm --filter frontend build",
+    "type-check": "pnpm --filter @mealmate/schemas type-check && pnpm --filter frontend type-check",
+    "docs:dev": "pnpm --filter docs start",
+    "docs:build": "pnpm --filter docs build"
+  },
+  "engines": {
+    "node": ">=22",
+    "pnpm": ">=10"
+  }
+}
