@@ -83,6 +83,12 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+using (var scope = app.Services.CreateScope())
+{
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
+    await DataSeeder.SeedUsersAsync(userManager);
+}
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
