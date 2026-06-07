@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using FluentValidation;
 using Mealmate.Api.Data;
+using Mealmate.Api.DTOs;
 using Mealmate.Api.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -138,40 +139,6 @@ public class RecipesController(AppDbContext db) : ControllerBase
         recipe.Ingredients.Select(i => new IngredientDto(i.Id, i.Name, i.Amount, i.Unit)).ToList(),
         recipe.Categories.Select(c => new CategoryDto(c.Id, c.Name)).ToList());
 }
-
-public record RecipeListDto(
-    Guid Id,
-    string Title,
-    string? Description,
-    int Servings,
-    int? PrepTimeMinutes,
-    int? CookTimeMinutes,
-    List<CategoryDto> Categories);
-
-public record RecipeDetailDto(
-    Guid Id,
-    string Title,
-    string? Description,
-    int Servings,
-    int? PrepTimeMinutes,
-    int? CookTimeMinutes,
-    List<string> Steps,
-    List<IngredientDto> Ingredients,
-    List<CategoryDto> Categories);
-
-public record IngredientDto(Guid Id, string Name, decimal Amount, string Unit);
-
-public record RecipeRequest(
-    string Title,
-    string? Description,
-    int Servings,
-    int? PrepTimeMinutes,
-    int? CookTimeMinutes,
-    List<IngredientRequestItem> Ingredients,
-    List<string> Steps,
-    List<Guid> CategoryIds);
-
-public record IngredientRequestItem(string Name, decimal Amount, string Unit);
 
 public class RecipeRequestValidator : AbstractValidator<RecipeRequest>
 {

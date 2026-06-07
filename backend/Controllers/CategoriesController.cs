@@ -1,5 +1,6 @@
 using FluentValidation;
 using Mealmate.Api.Data;
+using Mealmate.Api.DTOs;
 using Mealmate.Api.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -65,10 +66,6 @@ public class CategoriesController(AppDbContext db) : ControllerBase
         return NoContent();
     }
 }
-
-public record CategoryDto(Guid Id, string Name);
-
-public record CategoryRequest(string Name);
 
 public class CategoryRequestValidator : AbstractValidator<CategoryRequest>
 {

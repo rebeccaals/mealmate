@@ -34,7 +34,19 @@ Full CRUD for recipes, all endpoints requiring a valid JWT:
 - `PUT /api/recipes/{id}` — full replace; old ingredients are deleted and recreated from the request
 - `DELETE /api/recipes/{id}` — deletes the recipe and cascades to its ingredients
 
-Also contains the DTOs (data shapes) used in API responses: `RecipeListDto`, `RecipeDetailDto`, `IngredientDto`, and `RecipeRequest`.
+Contains only the `RecipeRequestValidator` — the data shapes (DTOs) live in `DTOs/RecipeDtos.cs`.
+
+---
+
+### `DTOs/CategoryDtos.cs`
+
+Data shapes for the categories API: `CategoryDto` (what the API returns) and `CategoryRequest` (what the API accepts). Kept separate from the controller so they can be shared — `CategoryDto` is used by both `CategoriesController` and `RecipesController`.
+
+---
+
+### `DTOs/RecipeDtos.cs`
+
+Data shapes for the recipes API: `RecipeListDto`, `RecipeDetailDto`, `IngredientDto`, `RecipeRequest`, and `IngredientRequestItem`. The list and detail DTOs are different shapes — the list omits ingredients to keep the response light.
 
 ---
 
