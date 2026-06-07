@@ -3,6 +3,8 @@ import { useAppSelector } from '@/app/hooks'
 import Layout from '@/components/layout/Layout'
 import LoginPage from '@/pages/LoginPage'
 import RecipesPage from '@/pages/RecipesPage'
+import RecipeDetailPage from '@/pages/RecipeDetailPage'
+import RecipeForm from '@/components/recipes/RecipeForm'
 import MenuPage from '@/pages/MenuPage'
 import ShoppingPage from '@/pages/ShoppingPage'
 
@@ -25,6 +27,9 @@ export default function App() {
       >
         <Route index element={<Navigate to="/recipes" replace />} />
         <Route path="recipes" element={<RecipesPage />} />
+        <Route path="recipes/new" element={<RecipeForm />} />
+        <Route path="recipes/:id" element={<RecipeDetailPage />} />
+        <Route path="recipes/:id/edit" element={<RecipeForm />} />
         <Route path="menu" element={<MenuPage />} />
         <Route path="shopping" element={<ShoppingPage />} />
       </Route>

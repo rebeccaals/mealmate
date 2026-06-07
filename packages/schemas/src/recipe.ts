@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { CategorySchema } from './category'
 
 export const IngredientSchema = z.object({
   id: z.string().uuid().optional(),
@@ -19,5 +20,28 @@ export const RecipeSchema = z.object({
   categoryIds: z.array(z.string().uuid()),
 })
 
+// Response types — what the API returns (different from the form/request schema above)
+export const RecipeListItemSchema = z.object({
+  id: z.string().uuid(),
+  title: z.string(),
+  description: z.string().nullable().optional(),
+  servings: z.number(),
+  prepTimeMinutes: z.number().nullable().optional(),
+  cookTimeMinutes: z.number().nullable().optional(),
+  categories: z.array(CategorySchema),
+})
+
+export const RecipeDetailSchema = RecipeListItemSchema.extend({
+  steps: z.array(z.string()),
+  ingredients: z.array(z.object({
+    id: z.string().uuid(),
+    name: z.string(),
+    amount: z.number(),
+    unit: z.string(),
+  })),
+})
+
 export type Ingredient = z.infer<typeof IngredientSchema>
 export type Recipe = z.infer<typeof RecipeSchema>
+export type RecipeListItem = z.infer<typeof RecipeListItemSchema>
+export type RecipeDetail = z.infer<typeof RecipeDetailSchema>

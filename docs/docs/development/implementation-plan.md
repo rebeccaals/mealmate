@@ -16,7 +16,12 @@ A thorough plan of everything that needs to be built, in order. Each step depend
 
 ---
 
-## Step 2 — Authentication
+## Step 2 — Authentication ✅ Done
+
+**Decisions made:**
+- User object stored in localStorage alongside token (so display name survives page refresh)
+- JWT expiry: 7 days
+- All 401 responses → logout + redirect to `/login` (hook in RTK Query's `baseQuery` for future refresh token flow)
 
 This is the login flow. Without it, nothing in the app is accessible.
 
@@ -57,7 +62,10 @@ You can open the app, type your email and password, and land on the recipes page
 
 ---
 
-## Step 3 — Categories
+## Step 3 — Categories ✅ Done
+
+**Decisions made:**
+- DELETE blocked with 409 Conflict if any recipes use the category
 
 Simple CRUD. Good warm-up before recipes (which are more complex).
 
@@ -89,7 +97,12 @@ Categories can be created and listed via Swagger UI. The frontend has the API wi
 
 ---
 
-## Step 4 — Recipes
+## Step 4 — Recipes ✅ Done
+
+**Decisions made:**
+- Ingredients deleted and recreated on every PUT (no update-in-place)
+- Recipe form is full-page routes (`/recipes/new`, `/recipes/:id/edit`), not a modal
+- Inline category creation fires immediately (`POST /api/categories`) rather than deferring to recipe save
 
 The core feature. More complex than categories because a recipe has ingredients (a list), steps (a list), and a many-to-many relationship with categories.
 

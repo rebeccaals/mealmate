@@ -25,6 +25,19 @@ You rarely need to touch this file except when adding a new service or changing 
 
 ---
 
+### `Controllers/RecipesController.cs`
+
+Full CRUD for recipes, all endpoints requiring a valid JWT:
+- `GET /api/recipes` — list all recipes (title, description, categories, serving/time info — no ingredients)
+- `GET /api/recipes/{id}` — full recipe detail including ingredients and steps
+- `POST /api/recipes` — creates a recipe; records `createdById` from the JWT
+- `PUT /api/recipes/{id}` — full replace; old ingredients are deleted and recreated from the request
+- `DELETE /api/recipes/{id}` — deletes the recipe and cascades to its ingredients
+
+Also contains the DTOs (data shapes) used in API responses: `RecipeListDto`, `RecipeDetailDto`, `IngredientDto`, and `RecipeRequest`.
+
+---
+
 ### `Controllers/CategoriesController.cs`
 
 Full CRUD for categories, all endpoints requiring a valid JWT:
@@ -199,6 +212,17 @@ The bottom nav is styled for mobile — this is what makes the app feel like an 
 
 ---
 
+### `features/recipes/recipesApi.ts`
+
+RTK Query endpoints for recipes. Provides hooks for every operation:
+- `useGetRecipesQuery` — fetches the list (used on RecipesPage)
+- `useGetRecipeQuery` — fetches a single recipe by ID (used on RecipeDetailPage and RecipeForm in edit mode)
+- `useCreateRecipeMutation` — creates a recipe and navigates to the new recipe's detail page
+- `useUpdateRecipeMutation` — updates a recipe (full replace)
+- `useDeleteRecipeMutation` — deletes a recipe and navigates back to the list
+
+---
+
 ### `features/categories/categoriesApi.ts`
 
 RTK Query endpoints for categories. Provides four hooks used by the recipe form:
@@ -208,6 +232,30 @@ RTK Query endpoints for categories. Provides four hooks used by the recipe form:
 - `useDeleteCategoryMutation` — deletes a category (the backend rejects this if any recipes use it)
 
 All mutations invalidate the `Category` cache tag, so any component using `useGetCategoriesQuery` automatically refetches after a change.
+
+---
+
+### `pages/RecipesPage.tsx`
+
+The recipe list. Shows all recipes as cards (title, description snippet, servings, total time, category tags). Tapping a card navigates to the detail page. The "Add recipe" button navigates to `/recipes/new`.
+
+---
+
+### `pages/RecipeDetailPage.tsx`
+
+Full recipe view: title, description, serving size, times, category tags, ingredient list, and numbered steps. Has Edit (navigates to `/recipes/:id/edit`) and Delete (with confirmation dialog) buttons.
+
+---
+
+### `components/recipes/RecipeForm.tsx`
+
+Used for both creating (`/recipes/new`) and editing (`/recipes/:id/edit`). Detects its mode from the URL — if there's an `:id` param, it fetches the recipe and pre-fills the form.
+
+Key parts:
+- Basic fields (title, description, servings, prep/cook time)
+- **Ingredients** — dynamic list using React Hook Form's `useFieldArray`; each row has name, amount, unit, and a remove button
+- **Steps** — dynamic list with up/down reorder buttons and remove; stored internally as `{ value }` objects (React Hook Form requires objects for field arrays), transformed to plain strings on submit
+- **Categories** — toggle buttons for existing categories; inline "New category" input that immediately calls `POST /api/categories` and adds the new ID to the selection
 
 ---
 
