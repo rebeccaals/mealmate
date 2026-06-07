@@ -25,6 +25,16 @@ You rarely need to touch this file except when adding a new service or changing 
 
 ---
 
+### `Controllers/CategoriesController.cs`
+
+Full CRUD for categories, all endpoints requiring a valid JWT:
+- `GET /api/categories` — returns all categories sorted alphabetically
+- `POST /api/categories` — creates a category; validates name via FluentValidation
+- `PUT /api/categories/{id}` — renames a category; returns 404 if not found
+- `DELETE /api/categories/{id}` — deletes a category; returns 409 Conflict if any recipes use it
+
+---
+
 ### `Controllers/AuthController.cs`
 
 Handles the login flow. Contains three things:
@@ -189,6 +199,18 @@ The bottom nav is styled for mobile — this is what makes the app feel like an 
 
 ---
 
+### `features/categories/categoriesApi.ts`
+
+RTK Query endpoints for categories. Provides four hooks used by the recipe form:
+- `useGetCategoriesQuery` — fetches all categories, sorted alphabetically
+- `useCreateCategoryMutation` — creates a new category
+- `useUpdateCategoryMutation` — renames a category
+- `useDeleteCategoryMutation` — deletes a category (the backend rejects this if any recipes use it)
+
+All mutations invalidate the `Category` cache tag, so any component using `useGetCategoriesQuery` automatically refetches after a change.
+
+---
+
 ### `pages/LoginPage.tsx`
 
 The login form. Uses React Hook Form with Zod validation — the validation rules come from `LoginSchema`, which lives in `packages/schemas/src/auth.ts` and is imported as `@mealmate/schemas` (a local package, not something downloaded from the internet). This means the email and password are validated client-side before anything is sent to the backend.
@@ -204,6 +226,12 @@ Currently placeholders. Will become the main feature pages once the backend endp
 ---
 
 ## Packages (`packages/schemas/`)
+
+### `packages/schemas/src/category.ts`
+
+Zod schemas for categories. `CategorySchema` is the shape of a category returned from the API. `CategoryRequestSchema` validates the name field when creating or renaming a category (not empty, max 100 characters).
+
+---
 
 ### `packages/schemas/src/auth.ts`
 
