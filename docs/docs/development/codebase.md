@@ -27,6 +27,15 @@ You rarely need to touch this file except when adding a new service or changing 
 
 ---
 
+### `Controllers/MenuController.cs`
+
+Manages the weekly meal plan:
+- `GET /api/menu?weekStart=YYYY-MM-DD` — returns the menu for a given week; weekStart must be a Monday or returns 400. Returns an empty entry list if no entries exist yet (no DB row created).
+- `POST /api/menu/{weekStart}/entries` — assigns a recipe to a day/mealType slot; creates the `WeeklyMenu` row lazily if this is the first entry for that week; silently replaces any existing entry in the same slot.
+- `DELETE /api/menu/{weekStart}/entries/{entryId}` — removes a single entry.
+
+---
+
 ### `Controllers/RecipesController.cs`
 
 Full CRUD for recipes, all endpoints requiring a valid JWT:
@@ -57,6 +66,12 @@ Validates category create/update requests — name must not be empty and must be
 Validates recipe create/update requests — title not empty, servings positive, at least one ingredient (each with name/amount/unit), at least one step.
 
 FluentValidation validators registered in `Program.cs` via `AddValidatorsFromAssemblyContaining<Program>()` — they run automatically before the controller method is called, returning a 400 if validation fails.
+
+---
+
+### `DTOs/MenuDtos.cs`
+
+Data shapes for the menu API: `WeeklyMenuDto` (the full week response with entries), `MenuEntryDto` (one assigned recipe including its title), and `AddMenuEntryRequest` (what the frontend sends when assigning a recipe to a slot).
 
 ---
 
@@ -243,6 +258,24 @@ The app shell that wraps all authenticated pages. Renders:
 - A **bottom navigation bar** with links to Recipes, Menu, and Shopping
 
 The bottom nav is styled for mobile — this is what makes the app feel like an iPhone app.
+
+---
+
+### `features/menu/menuApi.ts`
+
+RTK Query endpoints for the weekly menu: `useGetMenuQuery` (fetch a week's entries), `useAddMenuEntryMutation` (assign a recipe to a slot), and `useRemoveMenuEntryMutation` (remove an entry).
+
+---
+
+### `pages/MenuPage.tsx`
+
+The weekly meal planner. Shows a 7-column (Mon–Sun) × 3-row (Breakfast/Lunch/Dinner) grid for the current week. Prev/next buttons navigate between weeks.
+
+Tapping a cell opens a panel at the bottom of the screen:
+- **Empty cell** — shows a recipe picker (scrollable list of all recipes)
+- **Filled cell** — shows the recipe name with "View recipe" and "Remove" options
+
+Week state is local (not in Redux) — navigating away and back resets to the current week.
 
 ---
 

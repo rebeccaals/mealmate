@@ -176,7 +176,13 @@ You can add a recipe with ingredients, steps, and categories. You can see all yo
 
 ---
 
-## Step 5 — Weekly menu
+## Step 5 — Weekly menu ✅ Done
+
+**Decisions made:**
+- Assigning a recipe to a filled slot replaces the existing entry silently
+- Non-Monday weekStart rejected with 400
+- `WeeklyMenu` row created lazily on first POST (not on GET)
+- All enums serialized as strings throughout (fixed pre-existing bug where MealType would have serialized as integers)
 
 Plan meals for each day of the week. Depends on recipes being done first (you need recipes to plan with).
 
