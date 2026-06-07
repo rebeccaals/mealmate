@@ -10,6 +10,8 @@ What each file does, in plain language. Updated as new files are added.
 
 ## Backend (`backend/`)
 
+The backend is organized so each file has one clear responsibility: controllers handle HTTP logic, DTOs describe data shapes, validators enforce input rules, and models represent database entities. This mirrors the structure you'd typically see in a professional .NET codebase.
+
 ### `Program.cs`
 
 The entry point and bootstrap file for the entire backend. This is where the app is configured before it starts.
@@ -35,6 +37,26 @@ Full CRUD for recipes, all endpoints requiring a valid JWT:
 - `DELETE /api/recipes/{id}` — deletes the recipe and cascades to its ingredients
 
 Contains only the `RecipeRequestValidator` — the data shapes (DTOs) live in `DTOs/RecipeDtos.cs`.
+
+---
+
+### `Validators/LoginRequestValidator.cs`
+
+Validates the login request — email must be a valid format, password must not be empty.
+
+---
+
+### `Validators/CategoryRequestValidator.cs`
+
+Validates category create/update requests — name must not be empty and must be under 100 characters.
+
+---
+
+### `Validators/RecipeRequestValidator.cs`
+
+Validates recipe create/update requests — title not empty, servings positive, at least one ingredient (each with name/amount/unit), at least one step.
+
+FluentValidation validators registered in `Program.cs` via `AddValidatorsFromAssemblyContaining<Program>()` — they run automatically before the controller method is called, returning a 400 if validation fails.
 
 ---
 

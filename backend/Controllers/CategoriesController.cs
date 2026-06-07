@@ -1,4 +1,3 @@
-using FluentValidation;
 using Mealmate.Api.Data;
 using Mealmate.Api.DTOs;
 using Mealmate.Api.Models;
@@ -67,10 +66,3 @@ public class CategoriesController(AppDbContext db) : ControllerBase
     }
 }
 
-public class CategoryRequestValidator : AbstractValidator<CategoryRequest>
-{
-    public CategoryRequestValidator()
-    {
-        RuleFor(x => x.Name).NotEmpty().MaximumLength(100);
-    }
-}
