@@ -93,7 +93,7 @@ using (var scope = app.Services.CreateScope())
     await db.Database.MigrateAsync();
 
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
-    await DataSeeder.SeedUsersAsync(userManager);
+    await DataSeeder.SeedUsersAsync(userManager, app.Configuration);
 }
 
 if (app.Environment.IsDevelopment())

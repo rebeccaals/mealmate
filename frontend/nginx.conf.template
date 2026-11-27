@@ -1,0 +1,19 @@
+# Template: the nginx image replaces ${PORT} and ${BACKEND_URL} with env vars at container start.
+# Locally (docker compose) the defaults from the Dockerfile are used; on Railway, PORT is set
+# automatically and BACKEND_URL points at the backend's private address.
+server {
+    listen ${PORT};
+    listen [::]:${PORT};
+    root /usr/share/nginx/html;
+    index index.html;
+
+    location /api/ {
+        proxy_pass ${BACKEND_URL};
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

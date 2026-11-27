@@ -238,7 +238,16 @@ Before deploy, while there is no real data. See ADR-005.
 
 **Done when:** the app works exactly as before, with Norwegian domain names everywhere.
 
-## Step 7 — Deploy to Railway (+ PWA)
+## Step 7 — Deploy to Railway (+ PWA) — code ready, Railway setup pending
+
+**Decisions made:**
+- Only the frontend is public; nginx forwards `/api/*` to the backend over Railway's private network — one origin, no CORS needed in production
+- nginx config is a template (`PORT`, `BACKEND_URL` from env) so the same image works in docker compose and on Railway
+- No secrets in `appsettings.json`: JWT key, connection string and seed passwords live in `appsettings.Development.json` locally and env vars in production; backend refuses to start without `Jwt:Key`
+- Seed passwords from config (`SeedPasswords__Rebecca` / `__Nicolay`) instead of hard-coded `Mealmate1` — so "change password" can stay in step 11
+- PWA without a service worker: manifest + apple-touch-icon is enough for "Legg til på Hjem-skjerm" on iOS
+- Setup guide: [Deploy to Railway](deploy-railway.md)
+
 
 Moved forward so the app can be used while the rest is built.
 

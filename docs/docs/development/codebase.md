@@ -174,7 +174,19 @@ The `OnModelCreating` method configures the many-to-many join table between opps
 
 Runs once on startup. Creates Rebecca and Nicolay's accounts if they don't already exist. Safe to run repeatedly — it checks first.
 
-This is how both users got into the database without a registration flow. The starting password for both is `Mealmate1`.
+This is how both users got into the database without a registration flow. The passwords come from configuration (`SeedPasswords:Rebecca` / `SeedPasswords:Nicolay`): `Mealmate1` locally via `appsettings.Development.json`, and real passwords from Railway env vars in production. If a password is missing or rejected by Identity's rules, startup fails with a clear error instead of silently skipping the user.
+
+---
+
+### `appsettings.json` / `appsettings.Development.json`
+
+Configuration files. `appsettings.json` holds only settings that are safe everywhere (JWT issuer/audience, logging). Secrets and local-only values — the local connection string, a dev JWT key, and the dev seed passwords — live in `appsettings.Development.json`, which is only loaded when `ASPNETCORE_ENVIRONMENT=Development`. In production these come from environment variables (e.g. `Jwt__Key`; the double underscore means "nested key", so it maps to `Jwt:Key`). If `Jwt:Key` is missing, the backend refuses to start rather than falling back to a known key.
+
+---
+
+### `Dockerfile` (backend)
+
+Builds the backend in two stages: the .NET SDK image compiles and publishes the app, then only the published output is copied into the much smaller ASP.NET runtime image. Sets `ASPNETCORE_URLS=http://+:5001` so it listens on port 5001 on all network interfaces (including IPv6, which Railway's private network uses).
 
 ---
 
@@ -337,6 +349,22 @@ On submit it calls the `login` mutation from `authApi`. On success it dispatches
 ### `pages/HandlelistePage.tsx`
 
 Placeholder for the handleliste. Will be built in step 10 (see ADR-006).
+
+---
+
+### `frontend/public/manifest.webmanifest` and icons
+
+Makes the app installable as a PWA: name, start URL, `display: standalone` (opens without Safari's address bar) and theme colour. The icons are `icon-192.png` / `icon-512.png` (manifest), `apple-touch-icon.png` (180×180, what iOS uses on the home screen) and `favicon.svg` (browser tab). `index.html` links them and sets `viewport-fit=cover` so the app can use the whole iPhone screen; the `safe-area-bottom` utility in `index.css` keeps the bottom nav above the home indicator.
+
+---
+
+### `frontend/nginx.conf.template` and `frontend/Dockerfile`
+
+In production (and with `docker compose`) the frontend is served by nginx, not Vite. The Dockerfile builds the React app with pnpm, then copies the result into an nginx image.
+
+`nginx.conf.template` is a *template*: when the container starts, the nginx image replaces `${PORT}` and `${BACKEND_URL}` with environment variables. Locally they default to port 80 and `http://backend:5001` (the backend's name in docker compose). On Railway, `PORT` is set automatically and `BACKEND_URL` points at the backend's private address. Requests to `/api/` are forwarded to the backend; everything else gets `index.html` so React Router can handle the URL.
+
+See [Deploy to Railway](deploy-railway.md) for the production setup.
 
 ---
 

@@ -179,7 +179,7 @@ Common status codes:
 - Optimises them (minifying, tree-shaking unused code, etc.)
 - Outputs everything to a `dist/` folder, which is what nginx serves in the Docker container
 
-The proxy is a development-only feature — in production, nginx takes over that job (which is why the `nginx.conf` needs a `/api/` proxy block).
+The proxy is a development-only feature — in production, nginx takes over that job (which is why `frontend/nginx.conf.template` has a `/api/` proxy block).
 
 The main alternative is **Webpack**, which does the same jobs but is older, slower, and much more complex to configure. **Create React App** (now deprecated) was a popular wrapper around Webpack that gave you a working setup without touching the config. Older .NET + React projects at companies are usually running Webpack — Microsoft's ASP.NET Core templates only switched to Vite in .NET 7 (2022).
 

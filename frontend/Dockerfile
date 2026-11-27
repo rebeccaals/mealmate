@@ -18,5 +18,8 @@ RUN pnpm build
 
 FROM nginx:alpine
 COPY --from=builder /app/frontend/dist /usr/share/nginx/html
-COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
+# Files in /etc/nginx/templates are filled in with env vars and written to /etc/nginx/conf.d at start
+COPY frontend/nginx.conf.template /etc/nginx/templates/default.conf.template
+ENV PORT=80
+ENV BACKEND_URL=http://backend:5001
 EXPOSE 80
