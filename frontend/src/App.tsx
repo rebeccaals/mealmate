@@ -2,11 +2,11 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAppSelector } from '@/app/hooks'
 import Layout from '@/components/layout/Layout'
 import LoginPage from '@/pages/LoginPage'
-import RecipesPage from '@/pages/RecipesPage'
-import RecipeDetailPage from '@/pages/RecipeDetailPage'
-import RecipeForm from '@/components/recipes/RecipeForm'
-import MenuPage from '@/pages/MenuPage'
-import ShoppingPage from '@/pages/ShoppingPage'
+import OppskrifterPage from '@/pages/OppskrifterPage'
+import OppskriftDetailPage from '@/pages/OppskriftDetailPage'
+import OppskriftForm from '@/components/oppskrifter/OppskriftForm'
+import UkesmenyPage from '@/pages/UkesmenyPage'
+import HandlelistePage from '@/pages/HandlelistePage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = useAppSelector((state) => state.auth.token)
@@ -25,13 +25,13 @@ export default function App() {
           </ProtectedRoute>
         }
       >
-        <Route index element={<Navigate to="/recipes" replace />} />
-        <Route path="recipes" element={<RecipesPage />} />
-        <Route path="recipes/new" element={<RecipeForm />} />
-        <Route path="recipes/:id" element={<RecipeDetailPage />} />
-        <Route path="recipes/:id/edit" element={<RecipeForm />} />
-        <Route path="menu" element={<MenuPage />} />
-        <Route path="shopping" element={<ShoppingPage />} />
+        <Route index element={<Navigate to="/oppskrifter" replace />} />
+        <Route path="oppskrifter" element={<OppskrifterPage />} />
+        <Route path="oppskrifter/ny" element={<OppskriftForm />} />
+        <Route path="oppskrifter/:id" element={<OppskriftDetailPage />} />
+        <Route path="oppskrifter/:id/rediger" element={<OppskriftForm />} />
+        <Route path="ukesmeny" element={<UkesmenyPage />} />
+        <Route path="handleliste" element={<HandlelistePage />} />
       </Route>
     </Routes>
   )

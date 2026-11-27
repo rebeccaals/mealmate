@@ -214,7 +214,18 @@ You can navigate to any week and plan which recipe you're having for each meal. 
 
 > **Re-planned 2026-11-27** after a grilling session. Domain terms are defined in [CONTEXT.md](https://github.com/rebeccaals/mealmate/blob/main/CONTEXT.md); naming follows [ADR-005](../decisions/adr-005-norwegian-domain-terms.md). The original steps 6–8 (shopping list per week, polish, deploy last) are replaced by the steps below.
 
-## Step 6 — Rename to Norwegian domain terms
+## Step 6 — Rename to Norwegian domain terms ✅ Done
+
+**Decisions made:**
+- Domain *properties* are Norwegian too, not just class names (`Tittel`, `Porsjoner`, `Steg`, `Ingredienser`, `OpprettetAv`, `KategoriIder`) — so JSON fields are Norwegian as well
+- `ForberedelsestidMinutter` / `TilberedningstidMinutter` keep the unit in the name
+- `Dag` still uses .NET's `DayOfWeek` (English names over the wire); the frontend maps them to Norwegian labels
+- `ShoppingList`/`ShoppingItem` deleted rather than renamed — rebuilt from scratch in step 10
+- `MenuEntry` renamed to `Måltid` (still one oppskrift per måltid until step 8); routes `/api/ukesmeny/{ukestart}/maltider`
+- Migrations deleted and recreated as a single `InitialCreate`
+- `Kvelds` deliberately left for step 8
+- Backend applies pending migrations on startup (`MigrateAsync()` before seeding) — an empty database no longer crashes the seeder, and deploy doesn't need a separate migration step
+
 
 Before deploy, while there is no real data. See ADR-005.
 
@@ -234,7 +245,7 @@ Moved forward so the app can be used while the rest is built.
 1. Railway project + PostgreSQL plugin, auto-deploy from `main`
 2. Env vars: `Jwt__Key`, connection string
 3. Dockerfiles, `frontend/nginx.conf` for production routing
-4. Run migrations on deploy (GitHub Actions)
+4. ~~Run migrations on deploy (GitHub Actions)~~ — not needed: the backend migrates on startup (see step 6)
 5. PWA manifest + icons so the app can be added to the iPhone home screen
 
 From here on, every model change is a normal EF Core migration — never recreate migrations again.

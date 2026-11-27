@@ -54,27 +54,27 @@ namespace Mealmate.Api.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Categories",
+                name: "Kategorier",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Name = table.Column<string>(type: "text", nullable: false)
+                    Navn = table.Column<string>(type: "text", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Categories", x => x.Id);
+                    table.PrimaryKey("PK_Kategorier", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
-                name: "WeeklyMenus",
+                name: "Ukesmenyer",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    WeekStart = table.Column<DateOnly>(type: "date", nullable: false)
+                    Ukestart = table.Column<DateOnly>(type: "date", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_WeeklyMenus", x => x.Id);
+                    table.PrimaryKey("PK_Ukesmenyer", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -184,146 +184,98 @@ namespace Mealmate.Api.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Recipes",
+                name: "Oppskrifter",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Title = table.Column<string>(type: "text", nullable: false),
-                    Description = table.Column<string>(type: "text", nullable: true),
-                    Servings = table.Column<int>(type: "integer", nullable: false),
-                    PrepTimeMinutes = table.Column<int>(type: "integer", nullable: true),
-                    CookTimeMinutes = table.Column<int>(type: "integer", nullable: true),
-                    Steps = table.Column<List<string>>(type: "text[]", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    CreatedById = table.Column<string>(type: "text", nullable: false)
+                    Tittel = table.Column<string>(type: "text", nullable: false),
+                    Beskrivelse = table.Column<string>(type: "text", nullable: true),
+                    Porsjoner = table.Column<int>(type: "integer", nullable: false),
+                    ForberedelsestidMinutter = table.Column<int>(type: "integer", nullable: true),
+                    TilberedningstidMinutter = table.Column<int>(type: "integer", nullable: true),
+                    Steg = table.Column<List<string>>(type: "text[]", nullable: false),
+                    Opprettet = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    OpprettetAvId = table.Column<string>(type: "text", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Recipes", x => x.Id);
+                    table.PrimaryKey("PK_Oppskrifter", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Recipes_AspNetUsers_CreatedById",
-                        column: x => x.CreatedById,
+                        name: "FK_Oppskrifter_AspNetUsers_OpprettetAvId",
+                        column: x => x.OpprettetAvId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
-                name: "ShoppingLists",
+                name: "Ingredienser",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    WeeklyMenuId = table.Column<Guid>(type: "uuid", nullable: false),
-                    GeneratedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    Navn = table.Column<string>(type: "text", nullable: false),
+                    Mengde = table.Column<decimal>(type: "numeric", nullable: false),
+                    Enhet = table.Column<string>(type: "text", nullable: false),
+                    OppskriftId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_ShoppingLists", x => x.Id);
+                    table.PrimaryKey("PK_Ingredienser", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_ShoppingLists_WeeklyMenus_WeeklyMenuId",
-                        column: x => x.WeeklyMenuId,
-                        principalTable: "WeeklyMenus",
+                        name: "FK_Ingredienser_Oppskrifter_OppskriftId",
+                        column: x => x.OppskriftId,
+                        principalTable: "Oppskrifter",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
-                name: "CategoryRecipe",
+                name: "KategoriOppskrift",
                 columns: table => new
                 {
-                    CategoriesId = table.Column<Guid>(type: "uuid", nullable: false),
-                    RecipesId = table.Column<Guid>(type: "uuid", nullable: false)
+                    KategorierId = table.Column<Guid>(type: "uuid", nullable: false),
+                    OppskrifterId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_CategoryRecipe", x => new { x.CategoriesId, x.RecipesId });
+                    table.PrimaryKey("PK_KategoriOppskrift", x => new { x.KategorierId, x.OppskrifterId });
                     table.ForeignKey(
-                        name: "FK_CategoryRecipe_Categories_CategoriesId",
-                        column: x => x.CategoriesId,
-                        principalTable: "Categories",
+                        name: "FK_KategoriOppskrift_Kategorier_KategorierId",
+                        column: x => x.KategorierId,
+                        principalTable: "Kategorier",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_CategoryRecipe_Recipes_RecipesId",
-                        column: x => x.RecipesId,
-                        principalTable: "Recipes",
+                        name: "FK_KategoriOppskrift_Oppskrifter_OppskrifterId",
+                        column: x => x.OppskrifterId,
+                        principalTable: "Oppskrifter",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
-                name: "Ingredients",
+                name: "Måltider",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Name = table.Column<string>(type: "text", nullable: false),
-                    Amount = table.Column<decimal>(type: "numeric", nullable: false),
-                    Unit = table.Column<string>(type: "text", nullable: false),
-                    RecipeId = table.Column<Guid>(type: "uuid", nullable: false)
+                    Dag = table.Column<int>(type: "integer", nullable: false),
+                    Måltidstype = table.Column<int>(type: "integer", nullable: false),
+                    UkesmenyId = table.Column<Guid>(type: "uuid", nullable: false),
+                    OppskriftId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Ingredients", x => x.Id);
+                    table.PrimaryKey("PK_Måltider", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Ingredients_Recipes_RecipeId",
-                        column: x => x.RecipeId,
-                        principalTable: "Recipes",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "MenuEntries",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Day = table.Column<int>(type: "integer", nullable: false),
-                    MealType = table.Column<int>(type: "integer", nullable: false),
-                    WeeklyMenuId = table.Column<Guid>(type: "uuid", nullable: false),
-                    RecipeId = table.Column<Guid>(type: "uuid", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_MenuEntries", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_MenuEntries_Recipes_RecipeId",
-                        column: x => x.RecipeId,
-                        principalTable: "Recipes",
+                        name: "FK_Måltider_Oppskrifter_OppskriftId",
+                        column: x => x.OppskriftId,
+                        principalTable: "Oppskrifter",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_MenuEntries_WeeklyMenus_WeeklyMenuId",
-                        column: x => x.WeeklyMenuId,
-                        principalTable: "WeeklyMenus",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "ShoppingItems",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Name = table.Column<string>(type: "text", nullable: false),
-                    Amount = table.Column<decimal>(type: "numeric", nullable: false),
-                    Unit = table.Column<string>(type: "text", nullable: false),
-                    IsChecked = table.Column<bool>(type: "boolean", nullable: false),
-                    CheckedById = table.Column<string>(type: "text", nullable: true),
-                    CheckedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    ShoppingListId = table.Column<Guid>(type: "uuid", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_ShoppingItems", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_ShoppingItems_AspNetUsers_CheckedById",
-                        column: x => x.CheckedById,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id");
-                    table.ForeignKey(
-                        name: "FK_ShoppingItems_ShoppingLists_ShoppingListId",
-                        column: x => x.ShoppingListId,
-                        principalTable: "ShoppingLists",
+                        name: "FK_Måltider_Ukesmenyer_UkesmenyId",
+                        column: x => x.UkesmenyId,
+                        principalTable: "Ukesmenyer",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -366,44 +318,29 @@ namespace Mealmate.Api.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_CategoryRecipe_RecipesId",
-                table: "CategoryRecipe",
-                column: "RecipesId");
+                name: "IX_Ingredienser_OppskriftId",
+                table: "Ingredienser",
+                column: "OppskriftId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Ingredients_RecipeId",
-                table: "Ingredients",
-                column: "RecipeId");
+                name: "IX_KategoriOppskrift_OppskrifterId",
+                table: "KategoriOppskrift",
+                column: "OppskrifterId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_MenuEntries_RecipeId",
-                table: "MenuEntries",
-                column: "RecipeId");
+                name: "IX_Måltider_OppskriftId",
+                table: "Måltider",
+                column: "OppskriftId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_MenuEntries_WeeklyMenuId",
-                table: "MenuEntries",
-                column: "WeeklyMenuId");
+                name: "IX_Måltider_UkesmenyId",
+                table: "Måltider",
+                column: "UkesmenyId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Recipes_CreatedById",
-                table: "Recipes",
-                column: "CreatedById");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ShoppingItems_CheckedById",
-                table: "ShoppingItems",
-                column: "CheckedById");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ShoppingItems_ShoppingListId",
-                table: "ShoppingItems",
-                column: "ShoppingListId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ShoppingLists_WeeklyMenuId",
-                table: "ShoppingLists",
-                column: "WeeklyMenuId");
+                name: "IX_Oppskrifter_OpprettetAvId",
+                table: "Oppskrifter",
+                column: "OpprettetAvId");
         }
 
         /// <inheritdoc />
@@ -425,34 +362,28 @@ namespace Mealmate.Api.Migrations
                 name: "AspNetUserTokens");
 
             migrationBuilder.DropTable(
-                name: "CategoryRecipe");
+                name: "Ingredienser");
 
             migrationBuilder.DropTable(
-                name: "Ingredients");
+                name: "KategoriOppskrift");
 
             migrationBuilder.DropTable(
-                name: "MenuEntries");
-
-            migrationBuilder.DropTable(
-                name: "ShoppingItems");
+                name: "Måltider");
 
             migrationBuilder.DropTable(
                 name: "AspNetRoles");
 
             migrationBuilder.DropTable(
-                name: "Categories");
+                name: "Kategorier");
 
             migrationBuilder.DropTable(
-                name: "Recipes");
+                name: "Oppskrifter");
 
             migrationBuilder.DropTable(
-                name: "ShoppingLists");
+                name: "Ukesmenyer");
 
             migrationBuilder.DropTable(
                 name: "AspNetUsers");
-
-            migrationBuilder.DropTable(
-                name: "WeeklyMenus");
         }
     }
 }

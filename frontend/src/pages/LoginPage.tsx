@@ -24,9 +24,9 @@ export default function LoginPage() {
     try {
       const result = await login(data).unwrap()
       dispatch(setCredentials(result))
-      navigate('/recipes')
+      navigate('/oppskrifter')
     } catch {
-      setError('root', { message: 'Invalid email or password' })
+      setError('root', { message: 'Feil e-post eller passord' })
     }
   }
 
@@ -37,7 +37,7 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-1">
             <label htmlFor="email" className="text-sm font-medium">
-              Email
+              E-post
             </label>
             <input
               id="email"
@@ -52,7 +52,7 @@ export default function LoginPage() {
           </div>
           <div className="space-y-1">
             <label htmlFor="password" className="text-sm font-medium">
-              Password
+              Passord
             </label>
             <input
               id="password"
@@ -73,7 +73,7 @@ export default function LoginPage() {
             disabled={isLoading}
             className="w-full rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {isLoading ? 'Signing in…' : 'Sign in'}
+            {isLoading ? 'Logger inn…' : 'Logg inn'}
           </button>
         </form>
       </div>

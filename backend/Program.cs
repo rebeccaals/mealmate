@@ -88,6 +88,10 @@ var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {
+    // Apply pending migrations before seeding, so a fresh database gets its tables automatically
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    await db.Database.MigrateAsync();
+
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
     await DataSeeder.SeedUsersAsync(userManager);
 }

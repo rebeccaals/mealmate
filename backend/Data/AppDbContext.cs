@@ -7,20 +7,18 @@ namespace Mealmate.Api.Data;
 public class AppDbContext(DbContextOptions<AppDbContext> options)
     : IdentityDbContext<AppUser>(options)
 {
-    public DbSet<Recipe> Recipes => Set<Recipe>();
-    public DbSet<Ingredient> Ingredients => Set<Ingredient>();
-    public DbSet<Category> Categories => Set<Category>();
-    public DbSet<WeeklyMenu> WeeklyMenus => Set<WeeklyMenu>();
-    public DbSet<MenuEntry> MenuEntries => Set<MenuEntry>();
-    public DbSet<ShoppingList> ShoppingLists => Set<ShoppingList>();
-    public DbSet<ShoppingItem> ShoppingItems => Set<ShoppingItem>();
+    public DbSet<Oppskrift> Oppskrifter => Set<Oppskrift>();
+    public DbSet<Ingrediens> Ingredienser => Set<Ingrediens>();
+    public DbSet<Kategori> Kategorier => Set<Kategori>();
+    public DbSet<Ukesmeny> Ukesmenyer => Set<Ukesmeny>();
+    public DbSet<Måltid> Måltider => Set<Måltid>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
 
-        builder.Entity<Recipe>()
-            .HasMany(r => r.Categories)
-            .WithMany(c => c.Recipes);
+        builder.Entity<Oppskrift>()
+            .HasMany(o => o.Kategorier)
+            .WithMany(k => k.Oppskrifter);
     }
 }

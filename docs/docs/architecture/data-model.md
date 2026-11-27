@@ -4,53 +4,42 @@ sidebar_position: 2
 
 # Data Model
 
-## Entity overview
+Domain terms are Norwegian — see `CONTEXT.md` at the repo root for definitions and [ADR-005](../decisions/adr-005-norwegian-domain-terms.md) for why.
+
+## Entity overview (current)
 
 ```
 AppUser
   id, email, displayName
 
-Recipe
-  id, title, description, servings
-  prepTimeMinutes?, cookTimeMinutes?
-  steps[]
-  createdById → AppUser
-  ingredients[] → Ingredient
-  categories[] ↔ Category (many-to-many)
+Oppskrift
+  id, tittel, beskrivelse, porsjoner
+  forberedelsestidMinutter?, tilberedningstidMinutter?
+  steg[]
+  opprettet, opprettetAvId → AppUser
+  ingredienser[] → Ingrediens
+  kategorier[] ↔ Kategori (many-to-many, join table KategoriOppskrift)
 
-Ingredient
-  id, name, amount, unit
-  recipeId → Recipe
+Ingrediens
+  id, navn, mengde, enhet
+  oppskriftId → Oppskrift
 
-Category
-  id, name
-  recipes[] ↔ Recipe (many-to-many)
+Kategori
+  id, navn
+  oppskrifter[] ↔ Oppskrift
 
-WeeklyMenu
-  id, weekStart (Monday's date)
-  entries[] → MenuEntry
+Ukesmeny
+  id, ukestart (Monday's date)
+  måltider[] → Måltid
 
-MenuEntry
-  id, day (0=Sun…6=Sat), mealType (Breakfast|Lunch|Dinner)
-  weeklyMenuId → WeeklyMenu
-  recipeId → Recipe
-
-ShoppingList
-  id, weeklyMenuId → WeeklyMenu, generatedAt
-  items[] → ShoppingItem
-
-ShoppingItem
-  id, name, amount, unit
-  isChecked, checkedById? → AppUser, checkedAt?
-  shoppingListId → ShoppingList
+Måltid
+  id, dag (DayOfWeek), måltidstype (Frokost|Lunsj|Middag)
+  ukesmenyId → Ukesmeny
+  oppskriftId → Oppskrift
 ```
 
-## Shopping list generation
+## Planned changes
 
-When a shopping list is generated from a weekly menu:
-
-1. Collect all ingredients from all recipes in all menu entries
-2. Group by ingredient name (case-insensitive)
-3. Within each group, combine items with the same unit by summing amounts
-4. For items with different units (e.g. grams and kg), convert to a common unit before summing
-5. Write the combined items to the `ShoppingItem` table
+- **Step 8:** `Måltid` gets `porsjoner` (default 2), 0..n oppskrifter (many-to-many) and an optional `notat`; `Måltidstype` gets `Kvelds`.
+- **Step 9:** `Butikkvare` (navn, avdeling); `Ingrediens` points to a butikkvare and uses a fixed `Enhet`.
+- **Step 10:** one shared `Handleliste` with `Vare` and `Kilde` — see [ADR-006](../decisions/adr-006-one-shared-handleliste.md).

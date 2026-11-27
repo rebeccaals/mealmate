@@ -13,7 +13,7 @@ export default function Layout() {
         <button
           onClick={() => dispatch(logout())}
           className="text-muted-foreground hover:text-foreground transition-colors"
-          aria-label="Log out"
+          aria-label="Logg ut"
         >
           <LogOut size={18} />
         </button>
@@ -26,7 +26,7 @@ export default function Layout() {
       <nav className="border-t bg-card safe-area-bottom">
         <div className="flex justify-around py-2">
           <NavLink
-            to="/recipes"
+            to="/oppskrifter"
             className={({ isActive }) =>
               `flex flex-col items-center gap-1 px-4 py-2 text-xs transition-colors ${
                 isActive ? 'text-primary' : 'text-muted-foreground'
@@ -34,10 +34,10 @@ export default function Layout() {
             }
           >
             <BookOpen size={20} />
-            Recipes
+            Oppskrifter
           </NavLink>
           <NavLink
-            to="/menu"
+            to="/ukesmeny"
             className={({ isActive }) =>
               `flex flex-col items-center gap-1 px-4 py-2 text-xs transition-colors ${
                 isActive ? 'text-primary' : 'text-muted-foreground'
@@ -45,10 +45,10 @@ export default function Layout() {
             }
           >
             <CalendarDays size={20} />
-            Menu
+            Ukesmeny
           </NavLink>
           <NavLink
-            to="/shopping"
+            to="/handleliste"
             className={({ isActive }) =>
               `flex flex-col items-center gap-1 px-4 py-2 text-xs transition-colors ${
                 isActive ? 'text-primary' : 'text-muted-foreground'
@@ -56,7 +56,7 @@ export default function Layout() {
             }
           >
             <ShoppingCart size={20} />
-            Shopping
+            Handleliste
           </NavLink>
         </div>
       </nav>

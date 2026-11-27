@@ -13,7 +13,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Mealmate.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260606135910_InitialCreate")]
+    [Migration("20261127193648_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -21,24 +21,24 @@ namespace Mealmate.Api.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.16")
+                .HasAnnotation("ProductVersion", "9.0.23")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("CategoryRecipe", b =>
+            modelBuilder.Entity("KategoriOppskrift", b =>
                 {
-                    b.Property<Guid>("CategoriesId")
+                    b.Property<Guid>("KategorierId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("RecipesId")
+                    b.Property<Guid>("OppskrifterId")
                         .HasColumnType("uuid");
 
-                    b.HasKey("CategoriesId", "RecipesId");
+                    b.HasKey("KategorierId", "OppskrifterId");
 
-                    b.HasIndex("RecipesId");
+                    b.HasIndex("OppskrifterId");
 
-                    b.ToTable("CategoryRecipe");
+                    b.ToTable("KategoriOppskrift");
                 });
 
             modelBuilder.Entity("Mealmate.Api.Models.AppUser", b =>
@@ -109,184 +109,127 @@ namespace Mealmate.Api.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
-            modelBuilder.Entity("Mealmate.Api.Models.Category", b =>
+            modelBuilder.Entity("Mealmate.Api.Models.Ingrediens", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Name")
+                    b.Property<string>("Enhet")
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.HasKey("Id");
-
-                    b.ToTable("Categories");
-                });
-
-            modelBuilder.Entity("Mealmate.Api.Models.Ingredient", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal>("Amount")
+                    b.Property<decimal>("Mengde")
                         .HasColumnType("numeric");
 
-                    b.Property<string>("Name")
+                    b.Property<string>("Navn")
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<Guid>("RecipeId")
+                    b.Property<Guid>("OppskriftId")
                         .HasColumnType("uuid");
-
-                    b.Property<string>("Unit")
-                        .IsRequired()
-                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("RecipeId");
+                    b.HasIndex("OppskriftId");
 
-                    b.ToTable("Ingredients");
+                    b.ToTable("Ingredienser");
                 });
 
-            modelBuilder.Entity("Mealmate.Api.Models.MenuEntry", b =>
+            modelBuilder.Entity("Mealmate.Api.Models.Kategori", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<int>("Day")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("MealType")
-                        .HasColumnType("integer");
-
-                    b.Property<Guid>("RecipeId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("WeeklyMenuId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("Navn")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("RecipeId");
-
-                    b.HasIndex("WeeklyMenuId");
-
-                    b.ToTable("MenuEntries");
+                    b.ToTable("Kategorier");
                 });
 
-            modelBuilder.Entity("Mealmate.Api.Models.Recipe", b =>
+            modelBuilder.Entity("Mealmate.Api.Models.Måltid", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<int?>("CookTimeMinutes")
+                    b.Property<int>("Dag")
                         .HasColumnType("integer");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<int>("Måltidstype")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("OppskriftId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UkesmenyId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OppskriftId");
+
+                    b.HasIndex("UkesmenyId");
+
+                    b.ToTable("Måltider");
+                });
+
+            modelBuilder.Entity("Mealmate.Api.Models.Oppskrift", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Beskrivelse")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("ForberedelsestidMinutter")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("Opprettet")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("CreatedById")
+                    b.Property<string>("OpprettetAvId")
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("Description")
-                        .HasColumnType("text");
-
-                    b.Property<int?>("PrepTimeMinutes")
+                    b.Property<int>("Porsjoner")
                         .HasColumnType("integer");
 
-                    b.Property<int>("Servings")
-                        .HasColumnType("integer");
-
-                    b.PrimitiveCollection<List<string>>("Steps")
+                    b.PrimitiveCollection<List<string>>("Steg")
                         .IsRequired()
                         .HasColumnType("text[]");
 
-                    b.Property<string>("Title")
+                    b.Property<int?>("TilberedningstidMinutter")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Tittel")
                         .IsRequired()
                         .HasColumnType("text");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CreatedById");
+                    b.HasIndex("OpprettetAvId");
 
-                    b.ToTable("Recipes");
+                    b.ToTable("Oppskrifter");
                 });
 
-            modelBuilder.Entity("Mealmate.Api.Models.ShoppingItem", b =>
+            modelBuilder.Entity("Mealmate.Api.Models.Ukesmeny", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<decimal>("Amount")
-                        .HasColumnType("numeric");
-
-                    b.Property<DateTime?>("CheckedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("CheckedById")
-                        .HasColumnType("text");
-
-                    b.Property<bool>("IsChecked")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("ShoppingListId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Unit")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CheckedById");
-
-                    b.HasIndex("ShoppingListId");
-
-                    b.ToTable("ShoppingItems");
-                });
-
-            modelBuilder.Entity("Mealmate.Api.Models.ShoppingList", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("GeneratedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("WeeklyMenuId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("WeeklyMenuId");
-
-                    b.ToTable("ShoppingLists");
-                });
-
-            modelBuilder.Entity("Mealmate.Api.Models.WeeklyMenu", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateOnly>("WeekStart")
+                    b.Property<DateOnly>("Ukestart")
                         .HasColumnType("date");
 
                     b.HasKey("Id");
 
-                    b.ToTable("WeeklyMenus");
+                    b.ToTable("Ukesmenyer");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -421,88 +364,60 @@ namespace Mealmate.Api.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("CategoryRecipe", b =>
+            modelBuilder.Entity("KategoriOppskrift", b =>
                 {
-                    b.HasOne("Mealmate.Api.Models.Category", null)
+                    b.HasOne("Mealmate.Api.Models.Kategori", null)
                         .WithMany()
-                        .HasForeignKey("CategoriesId")
+                        .HasForeignKey("KategorierId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Mealmate.Api.Models.Recipe", null)
+                    b.HasOne("Mealmate.Api.Models.Oppskrift", null)
                         .WithMany()
-                        .HasForeignKey("RecipesId")
+                        .HasForeignKey("OppskrifterId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Mealmate.Api.Models.Ingredient", b =>
+            modelBuilder.Entity("Mealmate.Api.Models.Ingrediens", b =>
                 {
-                    b.HasOne("Mealmate.Api.Models.Recipe", "Recipe")
-                        .WithMany("Ingredients")
-                        .HasForeignKey("RecipeId")
+                    b.HasOne("Mealmate.Api.Models.Oppskrift", "Oppskrift")
+                        .WithMany("Ingredienser")
+                        .HasForeignKey("OppskriftId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Recipe");
+                    b.Navigation("Oppskrift");
                 });
 
-            modelBuilder.Entity("Mealmate.Api.Models.MenuEntry", b =>
+            modelBuilder.Entity("Mealmate.Api.Models.Måltid", b =>
                 {
-                    b.HasOne("Mealmate.Api.Models.Recipe", "Recipe")
+                    b.HasOne("Mealmate.Api.Models.Oppskrift", "Oppskrift")
                         .WithMany()
-                        .HasForeignKey("RecipeId")
+                        .HasForeignKey("OppskriftId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Mealmate.Api.Models.WeeklyMenu", "WeeklyMenu")
-                        .WithMany("Entries")
-                        .HasForeignKey("WeeklyMenuId")
+                    b.HasOne("Mealmate.Api.Models.Ukesmeny", "Ukesmeny")
+                        .WithMany("Måltider")
+                        .HasForeignKey("UkesmenyId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Recipe");
+                    b.Navigation("Oppskrift");
 
-                    b.Navigation("WeeklyMenu");
+                    b.Navigation("Ukesmeny");
                 });
 
-            modelBuilder.Entity("Mealmate.Api.Models.Recipe", b =>
+            modelBuilder.Entity("Mealmate.Api.Models.Oppskrift", b =>
                 {
-                    b.HasOne("Mealmate.Api.Models.AppUser", "CreatedBy")
+                    b.HasOne("Mealmate.Api.Models.AppUser", "OpprettetAv")
                         .WithMany()
-                        .HasForeignKey("CreatedById")
+                        .HasForeignKey("OpprettetAvId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("CreatedBy");
-                });
-
-            modelBuilder.Entity("Mealmate.Api.Models.ShoppingItem", b =>
-                {
-                    b.HasOne("Mealmate.Api.Models.AppUser", "CheckedBy")
-                        .WithMany()
-                        .HasForeignKey("CheckedById");
-
-                    b.HasOne("Mealmate.Api.Models.ShoppingList", "ShoppingList")
-                        .WithMany("Items")
-                        .HasForeignKey("ShoppingListId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("CheckedBy");
-
-                    b.Navigation("ShoppingList");
-                });
-
-            modelBuilder.Entity("Mealmate.Api.Models.ShoppingList", b =>
-                {
-                    b.HasOne("Mealmate.Api.Models.WeeklyMenu", "WeeklyMenu")
-                        .WithMany()
-                        .HasForeignKey("WeeklyMenuId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("WeeklyMenu");
+                    b.Navigation("OpprettetAv");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -556,19 +471,14 @@ namespace Mealmate.Api.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Mealmate.Api.Models.Recipe", b =>
+            modelBuilder.Entity("Mealmate.Api.Models.Oppskrift", b =>
                 {
-                    b.Navigation("Ingredients");
+                    b.Navigation("Ingredienser");
                 });
 
-            modelBuilder.Entity("Mealmate.Api.Models.ShoppingList", b =>
+            modelBuilder.Entity("Mealmate.Api.Models.Ukesmeny", b =>
                 {
-                    b.Navigation("Items");
-                });
-
-            modelBuilder.Entity("Mealmate.Api.Models.WeeklyMenu", b =>
-                {
-                    b.Navigation("Entries");
+                    b.Navigation("Måltider");
                 });
 #pragma warning restore 612, 618
         }
