@@ -1,14 +1,22 @@
-# Template: the nginx image replaces ${PORT} and ${BACKEND_URL} with env vars at container start.
-# Locally (docker compose) the defaults from the Dockerfile are used; on Railway, PORT is set
-# automatically and BACKEND_URL points at the backend's private address.
+# Template: the nginx image replaces ${PORT}, ${BACKEND_URL} and ${NGINX_LOCAL_RESOLVERS} with env vars
+# at container start. Locally (docker compose) the defaults from the Dockerfile are used; on Railway, PORT
+# is set automatically and BACKEND_URL points at the backend's private address.
 server {
     listen ${PORT};
     listen [::]:${PORT};
     root /usr/share/nginx/html;
     index index.html;
 
+    # The container's own DNS server (filled in by the nginx image from /etc/resolv.conf).
+    # Re-resolve the backend's address every 10 s: when the backend is redeployed it gets a new
+    # private IP, and a cached old one makes every /api request hang.
+    resolver ${NGINX_LOCAL_RESOLVERS} valid=10s;
+
     location /api/ {
-        proxy_pass ${BACKEND_URL};
+        # Using a variable is what makes nginx look the host up at request time (via the resolver)
+        # instead of once at startup. With no path after the port, the original URI is passed on unchanged.
+        set $backend_url "${BACKEND_URL}";
+        proxy_pass $backend_url;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
     }

@@ -153,4 +153,5 @@ If you ever change a Dockerfile to copy something from a new place, add that pat
 
 - **Backend crashes with `Jwt:Key is required`** or **`SeedPasswords:… is required`** → a variable is missing on the backend service.
 - **Login returns 502 / "Bad Gateway"** → nginx can't reach the backend. Check that the backend service is named `backend`, is running, and that `BACKEND_URL` is set on the frontend.
+- **Pages stuck on "Laster…" after a backend deploy** → nginx is using the backend's old address. Fixed in the nginx config (it re-resolves every 10 s); if it ever happens again, **Restart** the frontend deployment as a quick fix.
 - **Logs:** click a service → **Deployments** → the latest deployment → **View logs**.

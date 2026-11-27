@@ -21,5 +21,7 @@ COPY --from=builder /app/frontend/dist /usr/share/nginx/html
 # Files in /etc/nginx/templates are filled in with env vars and written to /etc/nginx/conf.d at start
 COPY frontend/nginx.conf.template /etc/nginx/templates/default.conf.template
 ENV PORT=80
+# Makes the nginx image put the container's DNS server(s) in NGINX_LOCAL_RESOLVERS (used by the template)
+ENV NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1
 ENV BACKEND_URL=http://backend:5001
 EXPOSE 80

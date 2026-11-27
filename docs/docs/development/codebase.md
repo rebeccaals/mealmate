@@ -378,6 +378,8 @@ In production (and with `docker compose`) the frontend is served by nginx, not V
 
 `nginx.conf.template` is a *template*: when the container starts, the nginx image replaces `${PORT}` and `${BACKEND_URL}` with environment variables. Locally they default to port 80 and `http://backend:5001` (the backend's name in docker compose). On Railway, `PORT` is set automatically and `BACKEND_URL` points at the backend's private address. Requests to `/api/` are forwarded to the backend; everything else gets `index.html` so React Router can handle the URL.
 
+The backend address is looked up again every 10 seconds (`resolver` + a variable in `proxy_pass`). Without that, nginx resolves `backend.railway.internal` once at startup; after a backend redeploy the backend has a new private IP and every `/api` request hangs ("Laster…" forever) until the frontend is restarted. `NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1` in the Dockerfile makes the nginx image fill in the container's own DNS server, so the same config works in docker compose and on Railway.
+
 See [Deploy to Railway](deploy-railway.md) for the production setup.
 
 ---

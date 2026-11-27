@@ -245,6 +245,7 @@ Before deploy, while there is no real data. See ADR-005.
 - nginx config is a template (`PORT`, `BACKEND_URL` from env) so the same image works in docker compose and on Railway
 - No secrets in `appsettings.json`: JWT key, connection string and seed passwords live in `appsettings.Development.json` locally and env vars in production; backend refuses to start without `Jwt:Key`
 - Seed passwords from config (`SeedPasswords__Rebecca` / `__Nicolay`) instead of hard-coded `Mealmate1` — so "change password" can stay in step 11
+- nginx re-resolves the backend's private address every 10 s (`resolver` + variable in `proxy_pass`) — found in production: after a backend redeploy, the frontend kept the old IP and `/api` hung until the frontend was restarted
 - PWA without a service worker: manifest + apple-touch-icon is enough for "Legg til på Hjem-skjerm" on iOS
 - Setup guide: [Deploy to Railway](deploy-railway.md) — rewritten step by step after the first real setup (service rename is done by clicking the name at the top of the panel)
 
