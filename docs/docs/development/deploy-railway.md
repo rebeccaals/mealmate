@@ -122,26 +122,13 @@ Leave **Settings → Networking → Public Networking** alone — **don't** clic
 
 4. **Settings → Networking → Generate Domain.** This is the app's URL.
 
-### 4. Recommended: only rebuild what changed
+### 4. Watch Paths: backend only
 
-By default every push to `main` rebuilds and restarts **both** services — even a commit that only touches `docs/`. *Watch Paths* tell Railway which files matter for each service, so unrelated commits are skipped.
+*Watch Paths* tell Railway which files matter for a service, so commits that don't touch them are skipped. **Backend:** **Settings → Watch Paths** → `/backend/**` — this works.
 
-For each service: **Settings → Source → Watch Paths**, add one pattern per line:
+**Frontend: no Watch Paths.** We tried `/frontend/**`, `/packages/**`, `/package.json`, `/pnpm-lock.yaml`, `/pnpm-workspace.yaml`, but Railway then skipped *every* frontend commit (step 8 never reached production while the backend did). Without Watch Paths the frontend is rebuilt on every push, including docs-only commits — a small cost, but it can never fall behind the backend. Revisit only if someone finds out why the patterns didn't match.
 
-- **backend:**
-  ```
-  /backend/**
-  ```
-- **frontend** (also needs the root workspace files, because its Dockerfile copies them):
-  ```
-  /frontend/**
-  /packages/**
-  /package.json
-  /pnpm-lock.yaml
-  /pnpm-workspace.yaml
-  ```
-
-If you ever change a Dockerfile to copy something from a new place, add that path here too — otherwise a change there won't trigger a deploy.
+To deploy a service manually: change any setting → click **Deploy** in the bar at the top. (The ⋮ → **Redeploy** on an old deployment rebuilds *that* old commit, not the newest one.)
 
 ## Install on iPhone
 
@@ -153,5 +140,6 @@ If you ever change a Dockerfile to copy something from a new place, add that pat
 
 - **Backend crashes with `Jwt:Key is required`** or **`SeedPasswords:… is required`** → a variable is missing on the backend service.
 - **Login returns 502 / "Bad Gateway"** → nginx can't reach the backend. Check that the backend service is named `backend`, is running, and that `BACKEND_URL` is set on the frontend.
+- **A feature works locally but not in production** → check that *both* services deployed the latest commit (each service → **Deployments**, look at the commit message).
 - **Pages stuck on "Laster…" after a backend deploy** → nginx is using the backend's old address. Fixed in the nginx config (it re-resolves every 10 s); if it ever happens again, **Restart** the frontend deployment as a quick fix.
 - **Logs:** click a service → **Deployments** → the latest deployment → **View logs**.
