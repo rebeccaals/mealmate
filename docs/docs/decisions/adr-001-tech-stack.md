@@ -44,3 +44,7 @@ sidebar_position: 1
 - **Next.js (SSR):** Ruled out for initial version. No SEO benefit for an authenticated app. Added complexity without practical gain. Marked as future improvement.
 - **Auth0 / OAuth:** Deferred. Only two users, no public registration. ASP.NET Core Identity provides more learning value.
 - **Real-time sync (WebSockets):** Deferred. RTK Query's refetch-on-focus is sufficient for the shopping list use case for now.
+
+## Amendment (2026-11-27): goal changed, stack kept
+
+The primary goal shifted from *learning* (.NET, Docker, Redux) to *a usable app for two people*. The stack was re-evaluated against simpler options (e.g. React + Supabase, ~0 kr/month, minimal ops) and **kept**: steps 1–5 are already built on it, and switching would mean rewriting auth, recipes and the weekly menu without gaining any functionality. Accepted cost: ~5 USD/month on Railway and self-managed Docker/Postgres.

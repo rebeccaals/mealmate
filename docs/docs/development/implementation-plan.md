@@ -212,100 +212,85 @@ You can navigate to any week and plan which recipe you're having for each meal. 
 
 ---
 
-## Step 6 — Shopping list
+> **Re-planned 2026-11-27** after a grilling session. Domain terms are defined in [CONTEXT.md](https://github.com/rebeccaals/mealmate/blob/main/CONTEXT.md); naming follows [ADR-005](../decisions/adr-005-norwegian-domain-terms.md). The original steps 6–8 (shopping list per week, polish, deploy last) are replaced by the steps below.
 
-Generated from the weekly menu. The most algorithmically interesting feature.
+## Step 6 — Rename to Norwegian domain terms
 
-### Backend
+Before deploy, while there is no real data. See ADR-005.
 
-Create `backend/Controllers/ShoppingListController.cs`:
+- `Recipe` → `Oppskrift`, `Ingredient` → `Ingrediens`, `Category` → `Kategori`, `WeeklyMenu` → `Ukesmeny`, `MealType` → `Måltidstype` (`Frokost`, `Lunsj`, `Middag`, `Kvelds`), etc.
+- Controllers, DTOs, validators, Zod schemas, RTK Query endpoints and frontend types follow.
+- Routes in ASCII: `/api/oppskrifter`, `/api/ukesmeny`, `/api/maltider`.
+- Delete and recreate migrations (no data to keep).
+- UI text in Norwegian.
+- Update [data-model.md](../architecture/data-model.md) to the Norwegian names, and keep it current in steps 8–10 as the ukesmeny, butikkvare and handleliste models change.
 
-- `POST /api/shopping/generate?weekStart=2026-06-08` — generate a shopping list from the menu for that week
-  - Collects all ingredients from all recipes in all menu entries
-  - Groups by ingredient name (case-insensitive)
-  - Combines amounts with the same unit (200g + 300g = 500g)
-  - Converts compatible units before combining (500g + 1kg = 1.5kg)
-  - Saves the result as a `ShoppingList` with `ShoppingItem` rows
-  - Returns the full list
+**Done when:** the app works exactly as before, with Norwegian domain names everywhere.
 
-- `GET /api/shopping?weekStart=2026-06-08` — get the current shopping list for a week
+## Step 7 — Deploy to Railway (+ PWA)
 
-- `PATCH /api/shopping/items/{id}/check` — check or uncheck an item
-  - Records `checkedById` (who checked it) and `checkedAt`
+Moved forward so the app can be used while the rest is built.
 
-- `POST /api/shopping/items` — manually add an item to the list `{ name, amount, unit }`
-  - Records `addedById`
+1. Railway project + PostgreSQL plugin, auto-deploy from `main`
+2. Env vars: `Jwt__Key`, connection string
+3. Dockerfiles, `frontend/nginx.conf` for production routing
+4. Run migrations on deploy (GitHub Actions)
+5. PWA manifest + icons so the app can be added to the iPhone home screen
 
-- `DELETE /api/shopping/items/{id}` — remove a manually added item
+From here on, every model change is a normal EF Core migration — never recreate migrations again.
 
-Create `backend/Services/ShoppingListService.cs` — unit combining logic lives here. This is a good candidate for xUnit tests.
+**Done when:** both of you can open the app on your phones and add oppskrifter.
 
-### Unit combining logic
+## Step 8 — New ukesmeny model
 
-The service needs a conversion table, for example:
-- Weight: mg, g, kg (1kg = 1000g, 1g = 1000mg)
-- Volume: ml, dl, l (1l = 10dl = 1000ml)
-- Items: pcs, stk (treat as same)
+- Add `Kvelds` to `Måltidstype`.
+- `Måltid` = dag + måltidstype + `Porsjoner` (default 2) + 0..n oppskrifter (many-to-many, EF Core skip navigation) + optional `Notat`. One måltid per dag + måltidstype.
+- Replaces `MenuEntry` (one recipe per slot, silently overwritten).
+- UI: tap a måltid → add/remove oppskrifter, set porsjoner, write notat.
 
-Steps:
-1. Group ingredients by name (case-insensitive, trimmed)
-2. Within each group, try to convert all amounts to a common base unit
-3. Sum them up
-4. Format back to a readable unit (e.g. 1500g → 1.5kg)
+**Done when:** tirsdag middag can hold kyllinggryte + ris + salat for 4, and onsdag middag can be just "Rester".
 
-If units can't be converted (e.g. "2 cloves" + "1 bulb"), keep them as separate items.
+## Step 9 — Butikkvarer, avdelinger and ingredient parsing
 
-### Frontend
+- `Butikkvare` (name, `Avdeling`), shared by oppskrifter and handleliste. Fixed list of avdelinger.
+- `Ingrediens` = butikkvare + amount + `Enhet` (fixed list: g, kg, ml, dl, l, ts, ss, stk, fedd, pakke, boks, klype).
+- One free-text field per ingredient: `2 ss smør` → **2** · **ss** · **Smør ✓**. Handles `0,5`, `1/2`, `½`, unit synonyms (*spiseskje* → ss), missing unit → stk, missing amount → no amount. Unknown butikkvare → "Ny vare: Smør?" (asks for avdeling).
+- Paste a whole ingredient list (one per line) and parse all at once.
+- Parser is a pure TypeScript function in `packages/schemas` — unit test it thoroughly.
+- "Butikkvarer" page: edit, set avdeling, merge duplicates, bulk add (one per line).
 
-Update `frontend/src/pages/ShoppingPage.tsx`:
+**Done when:** writing an oppskrift with 10 ingredients is one paste or ten quick lines, with no dropdowns.
 
-- Shows the shopping list for the current week
-- "Generate list" button (or auto-generated when navigating to the page)
-- Items grouped or listed with checkboxes
-- Checked items shown with strikethrough and the name of who checked them ("✓ Checked by Nicolay")
-- "Add item manually" — a small form at the bottom (name, amount, unit)
-- Items added manually show who added them
+## Step 10 — Handleliste
 
-### What "done" looks like
+One shared, ongoing handleliste. See CONTEXT.md for vare, kilde, avkrysset.
 
-After planning your week's menu, you tap "Generate list" on the shopping page. A combined list appears. At the store, you check items off as you put them in the basket. Your partner sees the same list and can check things off from their phone simultaneously (on next refresh).
+- "Legg i handlelisten" from: the ukesmeny, selected days, a single måltid, an oppskrift (with porsjoner), or manually.
+- Each `Vare` = butikkvare + list of `Kilde` (måltid / oppskrift / manual) with their amounts. The vare's amount is the sum.
+- Summing: convert within the same kind (g/kg, ml/dl/l); different kinds shown side by side ("Smør 250 g + 2 ss"). Combining logic in a service with xUnit tests.
+- **Automatic sync:** when a måltid changes (porsjoner, oppskrifter added/removed), its kilder are updated — but only on varer that are not avkrysset. A vare reaching 0 is removed. Avkryssede varer are never changed; a mismatch is shown instead.
+- Adding a whole week twice doesn't double anything — a måltid is a kilde at most once.
+- Ukesmeny shows per måltid: not on list / 🛒 on list / 🛒⚠ avkrysset vare no longer matches.
+- Tap a vare to see its kilder ("til kyllinggryten tirsdag").
+- Grouped by avdeling, in an adjustable order.
+- Check off records who and when (ADR-004). "Fjern handlede varer" clears avkryssede.
+- Polling every 5 s while the handleliste page is open (RTK Query `pollingInterval`). Real-time (SignalR) only if polling proves insufficient.
 
----
+**Done when:** you plan the week, tap "Legg uken i handlelisten", and in the store you both see one list grouped by avdeling that stays in sync.
 
-## Step 7 — Polish & quality of life
+## Step 11 — Polish & quality of life
 
-Small improvements once all features work:
-
-- **Change password** — a simple form so you don't have to keep using `Mealmate1`
-- **Recipe search/filter** — filter by category or search by title
-- **Serving size scaler** — "this recipe is for 2, I need 4" adjusts ingredient amounts
-- **PWA manifest** — so the app can be installed to the iPhone home screen
-- **Loading states** — skeleton loaders while data is fetching
-- **Empty states** — friendly messages when there are no recipes/items yet
-
----
-
-## Step 8 — Deploy to Railway
-
-When the app is working well locally:
-
-1. Create a Railway project
-2. Add a PostgreSQL plugin (Railway hosts the database)
-3. Connect the GitHub repo — Railway auto-deploys on push to `main`
-4. Set environment variables in Railway: `Jwt__Key`, database connection string
-5. Configure Railway to use the Dockerfiles
-6. Update `frontend/nginx.conf` if needed for production routing
-7. Add a GitHub Actions workflow step to run migrations on deploy
-
-### What "done" looks like
-
-The app is live on a Railway URL. You and Nicolay can access it from your iPhones without running anything on your Mac.
+- Change password
+- Recipe search/filter by kategori or title
+- Loading and empty states
 
 ---
 
 ## Future ideas (not planned yet)
 
-- Server-sent events or WebSockets for real-time shopping list sync
+- **Delmåltid** — per-oppskrift porsjoner within a måltid (e.g. tirsdag middag: kyllinggryte ×2, ris ×4, salat ×1). Today porsjoner live on the måltid; if that proves too coarse, introduce *Delmåltid* (måltid → delmåltider → oppskrift + porsjoner) and move porsjoner there.
+
+- Server-sent events or WebSockets (SignalR) for real-time handleliste sync — polling (5 s) used until it proves insufficient
 - SSR with Next.js
 - Recipe photo uploads
 - Meal history / archive of past weeks
