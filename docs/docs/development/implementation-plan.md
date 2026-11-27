@@ -261,7 +261,17 @@ From here on, every model change is a normal EF Core migration — never recreat
 
 **Done when:** both of you can open the app on your phones and add oppskrifter.
 
-## Step 8 — New ukesmeny model
+## Step 8 — New ukesmeny model ✅ Done
+
+**Decisions made:**
+- One upsert endpoint `PUT /api/ukesmeny/{ukestart}/maltider/{dag}/{maltidstype}` with the whole måltid (`porsjoner`, `notat`, `oppskriftIder`) instead of separate add/remove endpoints; an empty måltid is deleted (204)
+- Migration hand-edited to keep production data: old `OppskriftId` copied into `MåltidOppskrift` before the column is dropped; existing måltider get 2 porsjoner
+- Unique index on (ukesmeny, dag, måltidstype) enforces "one måltid per dag + måltidstype"
+- Deleting an oppskrift removes it from måltider (no longer deletes the måltid); måltider left empty are cleaned up
+- Panel saves every change immediately — no save button; notat saves on blur/Enter
+- Porsjoner can only be changed once the måltid has an oppskrift or notat (an empty måltid isn't stored)
+- Grid shows first oppskrift + "+N", porsjoner only when ≠ 2, notat in italics when there are no oppskrifter
+
 
 - Add `Kvelds` to `Måltidstype`.
 - `Måltid` = dag + måltidstype + `Porsjoner` (default 2) + 0..n oppskrifter (many-to-many, EF Core skip navigation) + optional `Notat`. One måltid per dag + måltidstype.

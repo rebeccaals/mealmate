@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, X, Plus } from 'lucide-react'
-import type { DayOfWeek, Måltidstype, MåltidResponse } from '@mealmate/schemas'
-import { useGetUkesmenyQuery, useAddMåltidMutation, useRemoveMåltidMutation } from '@/features/ukesmeny/ukesmenyApi'
+import { ChevronLeft, ChevronRight, Plus, Users } from 'lucide-react'
+import { STANDARD_PORSJONER, type DayOfWeek, type Måltidstype, type MåltidResponse } from '@mealmate/schemas'
+import { useGetUkesmenyQuery } from '@/features/ukesmeny/ukesmenyApi'
 import { useGetOppskrifterQuery } from '@/features/oppskrifter/oppskrifterApi'
+import MåltidPanel from '@/components/ukesmeny/MåltidPanel'
 
 const DAGER: DayOfWeek[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-const MÅLTIDSTYPER: Måltidstype[] = ['Frokost', 'Lunsj', 'Middag']
+const MÅLTIDSTYPER: Måltidstype[] = ['Frokost', 'Lunsj', 'Middag', 'Kvelds']
 
 const DAGNAVN: Record<DayOfWeek, string> = {
   Monday: 'Mandag',
@@ -41,18 +41,40 @@ function formatUkeLabel(mandag: Date): string {
   return `${mandag.toLocaleDateString('nb-NO', opts)} – ${søndag.toLocaleDateString('nb-NO', opts)}`
 }
 
+// What a filled måltid shows in the grid: first oppskrift (+ how many more), or the notat
+function MåltidInnhold({ måltid }: { måltid: MåltidResponse }) {
+  const [første, ...resten] = måltid.oppskrifter
+  return (
+    <span className="block leading-tight">
+      {første ? (
+        <span className="line-clamp-2">{første.tittel}</span>
+      ) : (
+        <span className="line-clamp-2 italic text-muted-foreground">{måltid.notat}</span>
+      )}
+      {(resten.length > 0 || (første && måltid.porsjoner !== STANDARD_PORSJONER)) && (
+        <span className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground">
+          {resten.length > 0 && <span>+{resten.length}</span>}
+          {første && måltid.porsjoner !== STANDARD_PORSJONER && (
+            <span className="flex items-center gap-0.5">
+              <Users size={9} />
+              {måltid.porsjoner}
+            </span>
+          )}
+        </span>
+      )}
+    </span>
+  )
+}
+
 type ValgtMåltid = { dag: DayOfWeek; måltidstype: Måltidstype }
 
 export default function UkesmenyPage() {
-  const navigate = useNavigate()
   const [ukeMandag, setUkeMandag] = useState(() => getMandagIUken(new Date()))
   const [valgt, setValgt] = useState<ValgtMåltid | null>(null)
 
   const ukestart = formatUkestart(ukeMandag)
   const { data: ukesmeny, isLoading } = useGetUkesmenyQuery(ukestart)
   const { data: oppskrifter = [] } = useGetOppskrifterQuery()
-  const [addMåltid] = useAddMåltidMutation()
-  const [removeMåltid] = useRemoveMåltidMutation()
 
   const måltidMap = useMemo(() => {
     const map = new Map<string, MåltidResponse>()
@@ -63,18 +85,6 @@ export default function UkesmenyPage() {
   const valgtMåltid = valgt
     ? måltidMap.get(`${valgt.dag}-${valgt.måltidstype}`)
     : undefined
-
-  const handleVelgOppskrift = async (oppskriftId: string) => {
-    if (!valgt) return
-    await addMåltid({ ukestart, body: { dag: valgt.dag, måltidstype: valgt.måltidstype, oppskriftId } })
-    setValgt(null)
-  }
-
-  const handleFjern = async () => {
-    if (!valgt || !valgtMåltid?.id) return
-    await removeMåltid({ ukestart, måltidId: valgtMåltid.id })
-    setValgt(null)
-  }
 
   const flyttUke = (dager: number) =>
     setUkeMandag((d) => { const n = new Date(d); n.setDate(n.getDate() + dager); return n })
@@ -138,7 +148,7 @@ export default function UkesmenyPage() {
                           }`}
                         >
                           {måltid ? (
-                            <span className="line-clamp-2 leading-tight">{måltid.oppskriftTittel}</span>
+                            <MåltidInnhold måltid={måltid} />
                           ) : (
                             <Plus size={12} className="text-muted-foreground m-auto" />
                           )}
@@ -153,60 +163,18 @@ export default function UkesmenyPage() {
         </div>
       )}
 
-      {/* Panel for valgt måltid */}
+      {/* Panel for valgt måltid. key resets the panel's local state when another måltid is chosen */}
       {valgt && (
-        <div className="fixed inset-x-0 bottom-16 mx-4 rounded-xl border bg-card shadow-lg p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">
-              {DAGNAVN[valgt.dag]} · {valgt.måltidstype}
-            </span>
-            <button
-              onClick={() => setValgt(null)}
-              aria-label="Lukk"
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <X size={16} />
-            </button>
-          </div>
-
-          {valgtMåltid ? (
-            <div className="space-y-2">
-              <p className="text-sm font-medium">{valgtMåltid.oppskriftTittel}</p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => { navigate(`/oppskrifter/${valgtMåltid.oppskriftId}`); setValgt(null) }}
-                  className="flex-1 rounded-md border px-3 py-2 text-sm hover:bg-accent transition-colors"
-                >
-                  Se oppskrift
-                </button>
-                <button
-                  onClick={handleFjern}
-                  className="flex-1 rounded-md border border-destructive text-destructive px-3 py-2 text-sm hover:bg-destructive hover:text-destructive-foreground transition-colors"
-                >
-                  Fjern
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground">Velg en oppskrift</p>
-              <div className="max-h-48 overflow-y-auto space-y-1">
-                {oppskrifter.length === 0 && (
-                  <p className="text-sm text-muted-foreground">Ingen oppskrifter ennå.</p>
-                )}
-                {oppskrifter.map((o) => (
-                  <button
-                    key={o.id}
-                    onClick={() => handleVelgOppskrift(o.id)}
-                    className="w-full text-left rounded-md px-3 py-2 text-sm hover:bg-accent transition-colors"
-                  >
-                    {o.tittel}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+        <MåltidPanel
+          key={`${ukestart}-${valgt.dag}-${valgt.måltidstype}`}
+          ukestart={ukestart}
+          dag={valgt.dag}
+          dagnavn={DAGNAVN[valgt.dag]}
+          måltidstype={valgt.måltidstype}
+          måltid={valgtMåltid}
+          alleOppskrifter={oppskrifter}
+          onClose={() => setValgt(null)}
+        />
       )}
     </div>
   )

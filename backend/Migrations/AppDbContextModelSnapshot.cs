@@ -160,17 +160,20 @@ namespace Mealmate.Api.Migrations
                     b.Property<int>("Måltidstype")
                         .HasColumnType("integer");
 
-                    b.Property<Guid>("OppskriftId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("Notat")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("Porsjoner")
+                        .HasColumnType("integer");
 
                     b.Property<Guid>("UkesmenyId")
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OppskriftId");
-
-                    b.HasIndex("UkesmenyId");
+                    b.HasIndex("UkesmenyId", "Dag", "Måltidstype")
+                        .IsUnique();
 
                     b.ToTable("Måltider");
                 });
@@ -361,6 +364,21 @@ namespace Mealmate.Api.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("MåltidOppskrift", b =>
+                {
+                    b.Property<Guid>("MåltidId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OppskriftId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("MåltidId", "OppskriftId");
+
+                    b.HasIndex("OppskriftId");
+
+                    b.ToTable("MåltidOppskrift");
+                });
+
             modelBuilder.Entity("KategoriOppskrift", b =>
                 {
                     b.HasOne("Mealmate.Api.Models.Kategori", null)
@@ -389,19 +407,11 @@ namespace Mealmate.Api.Migrations
 
             modelBuilder.Entity("Mealmate.Api.Models.Måltid", b =>
                 {
-                    b.HasOne("Mealmate.Api.Models.Oppskrift", "Oppskrift")
-                        .WithMany()
-                        .HasForeignKey("OppskriftId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("Mealmate.Api.Models.Ukesmeny", "Ukesmeny")
                         .WithMany("Måltider")
                         .HasForeignKey("UkesmenyId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Oppskrift");
 
                     b.Navigation("Ukesmeny");
                 });
@@ -464,6 +474,21 @@ namespace Mealmate.Api.Migrations
                     b.HasOne("Mealmate.Api.Models.AppUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("MåltidOppskrift", b =>
+                {
+                    b.HasOne("Mealmate.Api.Models.Måltid", null)
+                        .WithMany()
+                        .HasForeignKey("MåltidId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Mealmate.Api.Models.Oppskrift", null)
+                        .WithMany()
+                        .HasForeignKey("OppskriftId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

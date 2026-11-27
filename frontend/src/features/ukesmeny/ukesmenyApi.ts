@@ -1,4 +1,4 @@
-import type { UkesmenyResponse, MåltidResponse, AddMåltidRequest } from '@mealmate/schemas'
+import type { UkesmenyResponse, MåltidResponse, SaveMåltidRequest, DayOfWeek, Måltidstype } from '@mealmate/schemas'
 import { baseApi } from '@/features/api/baseApi'
 
 export const ukesmenyApi = baseApi.injectEndpoints({
@@ -7,22 +7,19 @@ export const ukesmenyApi = baseApi.injectEndpoints({
       query: (ukestart) => `ukesmeny?ukestart=${ukestart}`,
       providesTags: ['Ukesmeny'],
     }),
-    addMåltid: builder.mutation<MåltidResponse, { ukestart: string; body: AddMåltidRequest }>({
-      query: ({ ukestart, body }) => ({
-        url: `ukesmeny/${ukestart}/maltider`,
-        method: 'POST',
+    // Returns the saved måltid, or nothing (204) if it became empty and was removed
+    saveMåltid: builder.mutation<
+      MåltidResponse | null,
+      { ukestart: string; dag: DayOfWeek; måltidstype: Måltidstype; body: SaveMåltidRequest }
+    >({
+      query: ({ ukestart, dag, måltidstype, body }) => ({
+        url: `ukesmeny/${ukestart}/maltider/${dag}/${måltidstype}`,
+        method: 'PUT',
         body,
-      }),
-      invalidatesTags: ['Ukesmeny'],
-    }),
-    removeMåltid: builder.mutation<void, { ukestart: string; måltidId: string }>({
-      query: ({ ukestart, måltidId }) => ({
-        url: `ukesmeny/${ukestart}/maltider/${måltidId}`,
-        method: 'DELETE',
       }),
       invalidatesTags: ['Ukesmeny'],
     }),
   }),
 })
 
-export const { useGetUkesmenyQuery, useAddMåltidMutation, useRemoveMåltidMutation } = ukesmenyApi
+export const { useGetUkesmenyQuery, useSaveMåltidMutation } = ukesmenyApi

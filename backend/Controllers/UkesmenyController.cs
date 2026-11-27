@@ -22,32 +22,51 @@ public class UkesmenyController(AppDbContext db) : ControllerBase
 
         var ukesmeny = await db.Ukesmenyer
             .Include(u => u.Måltider)
-            .ThenInclude(m => m.Oppskrift)
+            .ThenInclude(m => m.Oppskrifter)
             .FirstOrDefaultAsync(u => u.Ukestart == dato);
 
-        if (ukesmeny is null)
-            return Ok(new UkesmenyDto(ukestart, []));
-
-        var måltider = ukesmeny.Måltider
-            .Select(m => new MåltidDto(m.Id, m.Dag, m.Måltidstype, m.OppskriftId, m.Oppskrift.Tittel))
-            .ToList();
-
+        var måltider = ukesmeny?.Måltider.Select(ToDto).ToList() ?? [];
         return Ok(new UkesmenyDto(ukestart, måltider));
     }
 
-    [HttpPost("{ukestart}/maltider")]
-    public async Task<IActionResult> AddMåltid(string ukestart, [FromBody] AddMåltidRequest request)
+    // Upsert: sets the whole måltid for one dag + måltidstype.
+    // A måltid with no oppskrifter and no notat is removed (returns 204).
+    [HttpPut("{ukestart}/maltider/{dag}/{maltidstype}")]
+    public async Task<IActionResult> SaveMåltid(
+        string ukestart,
+        DayOfWeek dag,
+        [FromRoute(Name = "maltidstype")] Måltidstype måltidstype,
+        [FromBody] SaveMåltidRequest request)
     {
         if (!TryParseUkestart(ukestart, out var dato))
             return BadRequest(UgyldigUkestart);
 
-        var oppskrift = await db.Oppskrifter.FindAsync(request.OppskriftId);
-        if (oppskrift is null)
-            return NotFound("Fant ikke oppskriften.");
+        var oppskriftIder = request.OppskriftIder.Distinct().ToList();
+        var oppskrifter = await db.Oppskrifter
+            .Where(o => oppskriftIder.Contains(o.Id))
+            .ToListAsync();
+        if (oppskrifter.Count != oppskriftIder.Count)
+            return BadRequest("Én eller flere oppskrifter finnes ikke.");
+
+        var notat = string.IsNullOrWhiteSpace(request.Notat) ? null : request.Notat.Trim();
 
         var ukesmeny = await db.Ukesmenyer
             .Include(u => u.Måltider)
+            .ThenInclude(m => m.Oppskrifter)
             .FirstOrDefaultAsync(u => u.Ukestart == dato);
+
+        var måltid = ukesmeny?.Måltider
+            .FirstOrDefault(m => m.Dag == dag && m.Måltidstype == måltidstype);
+
+        if (oppskrifter.Count == 0 && notat is null)
+        {
+            if (måltid is not null)
+            {
+                db.Måltider.Remove(måltid);
+                await db.SaveChangesAsync();
+            }
+            return NoContent();
+        }
 
         if (ukesmeny is null)
         {
@@ -55,43 +74,31 @@ public class UkesmenyController(AppDbContext db) : ControllerBase
             db.Ukesmenyer.Add(ukesmeny);
         }
 
-        // Erstatter eksisterende måltid på samme dag og måltidstype
-        var eksisterende = ukesmeny.Måltider
-            .FirstOrDefault(m => m.Dag == request.Dag && m.Måltidstype == request.Måltidstype);
-        if (eksisterende is not null)
-            db.Måltider.Remove(eksisterende);
-
-        var måltid = new Måltid
-        {
-            Dag = request.Dag,
-            Måltidstype = request.Måltidstype,
-            OppskriftId = request.OppskriftId,
-            Ukesmeny = ukesmeny,
-        };
-        db.Måltider.Add(måltid);
-        await db.SaveChangesAsync();
-
-        return Ok(new MåltidDto(måltid.Id, måltid.Dag, måltid.Måltidstype, oppskrift.Id, oppskrift.Tittel));
-    }
-
-    [HttpDelete("{ukestart}/maltider/{måltidId:guid}")]
-    public async Task<IActionResult> RemoveMåltid(string ukestart, Guid måltidId)
-    {
-        if (!TryParseUkestart(ukestart, out var dato))
-            return BadRequest(UgyldigUkestart);
-
-        var måltid = await db.Måltider
-            .Include(m => m.Ukesmeny)
-            .FirstOrDefaultAsync(m => m.Id == måltidId && m.Ukesmeny.Ukestart == dato);
-
         if (måltid is null)
-            return NotFound();
+        {
+            måltid = new Måltid { Dag = dag, Måltidstype = måltidstype, Ukesmeny = ukesmeny };
+            db.Måltider.Add(måltid);
+        }
 
-        db.Måltider.Remove(måltid);
+        måltid.Porsjoner = request.Porsjoner;
+        måltid.Notat = notat;
+        måltid.Oppskrifter = oppskrifter;
+
         await db.SaveChangesAsync();
 
-        return NoContent();
+        return Ok(ToDto(måltid));
     }
+
+    private static MåltidDto ToDto(Måltid m) => new(
+        m.Id,
+        m.Dag,
+        m.Måltidstype,
+        m.Porsjoner,
+        m.Notat,
+        m.Oppskrifter
+            .OrderBy(o => o.Tittel)
+            .Select(o => new MåltidOppskriftDto(o.Id, o.Tittel))
+            .ToList());
 
     private static bool TryParseUkestart(string ukestart, out DateOnly dato) =>
         DateOnly.TryParse(ukestart, out dato) && dato.DayOfWeek == DayOfWeek.Monday;

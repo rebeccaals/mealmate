@@ -114,6 +114,11 @@ public class OppskrifterController(AppDbContext db) : ControllerBase
         db.Oppskrifter.Remove(oppskrift);
         await db.SaveChangesAsync();
 
+        // The oppskrift is removed from any måltider; måltider left with nothing in them are cleaned up
+        await db.Måltider
+            .Where(m => m.Notat == null && !m.Oppskrifter.Any())
+            .ExecuteDeleteAsync();
+
         return NoContent();
     }
 

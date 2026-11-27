@@ -33,13 +33,13 @@ Ukesmeny
   måltider[] → Måltid
 
 Måltid
-  id, dag (DayOfWeek), måltidstype (Frokost|Lunsj|Middag)
-  ukesmenyId → Ukesmeny
-  oppskriftId → Oppskrift
+  id, dag (DayOfWeek), måltidstype (Frokost|Lunsj|Middag|Kvelds)
+  porsjoner (default 2), notat? (max 200)
+  ukesmenyId → Ukesmeny            unique (ukesmenyId, dag, måltidstype)
+  oppskrifter[] ↔ Oppskrift (many-to-many, join table MåltidOppskrift)
 ```
 
 ## Planned changes
 
-- **Step 8:** `Måltid` gets `porsjoner` (default 2), 0..n oppskrifter (many-to-many) and an optional `notat`; `Måltidstype` gets `Kvelds`.
 - **Step 9:** `Butikkvare` (navn, avdeling); `Ingrediens` points to a butikkvare and uses a fixed `Enhet`.
 - **Step 10:** one shared `Handleliste` with `Vare` and `Kilde` — see [ADR-006](../decisions/adr-006-one-shared-handleliste.md).

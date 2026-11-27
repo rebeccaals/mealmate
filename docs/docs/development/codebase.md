@@ -32,11 +32,10 @@ You rarely need to touch this file except when adding a new service or changing 
 ### `Controllers/UkesmenyController.cs`
 
 Manages the weekly meal plan (ukesmeny):
-- `GET /api/ukesmeny?ukestart=YYYY-MM-DD` — returns the ukesmeny for a given week; `ukestart` must be a Monday or returns 400. Returns an empty måltid list if nothing is planned yet (no DB row created).
-- `POST /api/ukesmeny/{ukestart}/maltider` — puts an oppskrift on a dag + måltidstype; creates the `Ukesmeny` row lazily if this is the first måltid that week; silently replaces any existing måltid on the same dag + måltidstype.
-- `DELETE /api/ukesmeny/{ukestart}/maltider/{måltidId}` — removes a single måltid.
+- `GET /api/ukesmeny?ukestart=YYYY-MM-DD` — returns the ukesmeny for a given week; `ukestart` must be a Monday or returns 400. Each måltid comes with its porsjoner, notat and oppskrifter (id + tittel). Returns an empty list if nothing is planned yet (no DB row created).
+- `PUT /api/ukesmeny/{ukestart}/maltider/{dag}/{maltidstype}` — **upsert**: sets the whole måltid for one dag + måltidstype (`{ porsjoner, notat, oppskriftIder }`). Creates the `Ukesmeny` row lazily if needed. If the måltid ends up with no oppskrifter and no notat, it's deleted and the endpoint returns 204. Returns 400 if any oppskriftId doesn't exist.
 
-Routes use `maltider` (ASCII) instead of `måltider` so URLs don't get percent-encoded (ADR-005).
+There's no separate "add"/"remove" endpoint: the frontend always sends the complete måltid, which keeps the API to one endpoint and makes every save idempotent. Routes use ASCII (`maltider`, `maltidstype`) so URLs aren't percent-encoded (ADR-005).
 
 ---
 
@@ -47,7 +46,7 @@ Full CRUD for oppskrifter, all endpoints requiring a valid JWT:
 - `GET /api/oppskrifter/{id}` (`GetOppskrift`) — full oppskrift including ingredienser and steg
 - `POST /api/oppskrifter` (`CreateOppskrift`) — creates an oppskrift; records `OpprettetAvId` from the JWT
 - `PUT /api/oppskrifter/{id}` (`UpdateOppskrift`) — full replace; old ingredienser are deleted and recreated from the request
-- `DELETE /api/oppskrifter/{id}` (`DeleteOppskrift`) — deletes the oppskrift and cascades to its ingredienser
+- `DELETE /api/oppskrifter/{id}` (`DeleteOppskrift`) — deletes the oppskrift and cascades to its ingredienser. It's also removed from any måltider; måltider left with no oppskrifter and no notat are deleted
 
 The data shapes (DTOs) live in `DTOs/OppskriftDtos.cs`.
 
@@ -73,15 +72,15 @@ FluentValidation validators registered in `Program.cs` via `AddValidatorsFromAss
 
 ---
 
-### `Validators/AddMåltidRequestValidator.cs`
+### `Validators/SaveMåltidRequestValidator.cs`
 
-Validates the request for putting an oppskrift on the ukesmeny — `OppskriftId` must be set.
+Validates a måltid save — porsjoner between 1 and 50, notat at most 200 characters, `OppskriftIder` present (may be empty).
 
 ---
 
 ### `DTOs/UkesmenyDtos.cs`
 
-Data shapes for the ukesmeny API: `UkesmenyDto` (the full week with its måltider), `MåltidDto` (one planned måltid including the oppskrift's tittel), and `AddMåltidRequest` (what the frontend sends when putting an oppskrift on a dag + måltidstype).
+Data shapes for the ukesmeny API: `UkesmenyDto` (the full week with its måltider), `MåltidDto` (dag, måltidstype, porsjoner, notat and its oppskrifter), `MåltidOppskriftDto` (just id + tittel — enough for the grid), and `SaveMåltidRequest` (what the frontend sends to save a måltid).
 
 ---
 
@@ -157,8 +156,10 @@ A label that can be applied to oppskrifter (e.g. "Vegetar", "Rask", "Pasta"). Ha
 Contains two classes and an enum:
 
 - **`Ukesmeny`** — a week's plan, identified by `Ukestart` (always a Monday). Has a list of `Måltider`.
-- **`Måltid`** — one dag + måltidstype in the grid, and which `Oppskrift` is planned. So "tirsdag middag = Pasta carbonara" is one `Måltid`. `Dag` uses .NET's built-in `DayOfWeek`, which is why it's serialized as English day names ("Tuesday").
-- **`Måltidstype`** — `Frokost`, `Lunsj`, `Middag`.
+- **`Måltid`** — one dag + måltidstype, e.g. "tirsdag middag". Has `Porsjoner` (default 2, `StandardPorsjoner`), an optional `Notat` ("Rester", "Spiser ute") and zero or more `Oppskrifter` (many-to-many — tirsdag middag can be kyllinggryte + ris + salat). All its oppskrifter are scaled to the måltid's porsjoner. `Dag` uses .NET's built-in `DayOfWeek`, which is why it's serialized as English day names ("Tuesday").
+- **`Måltidstype`** — `Frokost`, `Lunsj`, `Middag`, `Kvelds`.
+
+`AppDbContext` makes dag + måltidstype unique per ukesmeny and names the join table `MåltidOppskrift(MåltidId, OppskriftId)`.
 
 ---
 
@@ -193,6 +194,8 @@ Builds the backend in two stages: the .NET SDK image compiles and publishes the 
 ### `Migrations/`
 
 Auto-generated files created by the `dotnet ef migrations add` command. You never edit these by hand. Each migration file describes exactly what SQL to run to update the database schema.
+
+Usually you never edit these by hand — but a generated migration can lose data when it restructures tables. `MaltidMedFlereOppskrifter` was edited on purpose: it copies each måltid's old single `OppskriftId` into the new `MåltidOppskrift` table *before* dropping the column, and gives existing måltider 2 porsjoner instead of 0. Always read the generated migration when EF warns "may result in the loss of data".
 
 `AppDbContextModelSnapshot.cs` is a snapshot of the current schema — EF Core uses it to figure out what's changed since the last migration.
 
@@ -275,19 +278,30 @@ The bottom nav is styled for mobile — this is what makes the app feel like an 
 
 ### `features/ukesmeny/ukesmenyApi.ts`
 
-RTK Query endpoints for the ukesmeny: `useGetUkesmenyQuery` (fetch a week's måltider), `useAddMåltidMutation` (put an oppskrift on a dag + måltidstype), and `useRemoveMåltidMutation` (remove a måltid).
+RTK Query endpoints for the ukesmeny: `useGetUkesmenyQuery` (fetch a week's måltider) and `useSaveMåltidMutation` (save a whole måltid — porsjoner, notat and oppskrifter; returns `null` if the måltid became empty and was removed). Both use the `Ukesmeny` cache tag, so the grid refetches after every save.
 
 ---
 
 ### `pages/UkesmenyPage.tsx`
 
-The weekly meal planner. Shows a 7-column (man–søn) × 3-row (Frokost/Lunsj/Middag) grid for the current week. Prev/next buttons navigate between weeks.
+The weekly meal planner. Shows a 7-column (man–søn) × 4-row (Frokost/Lunsj/Middag/Kvelds) grid for the current week. Prev/next buttons navigate between weeks.
 
-Tapping a måltid opens a panel at the bottom of the screen:
-- **Empty** — shows an oppskrift picker (scrollable list of all oppskrifter)
-- **Filled** — shows the oppskrift's tittel with "Se oppskrift" and "Fjern" options
+Each filled måltid shows (via the small `MåltidInnhold` component) its first oppskrift, "+N" if there are more, and the porsjoner if they differ from 2 — or the notat in italics if there are no oppskrifter. Tapping a måltid opens `MåltidPanel`.
 
 The API sends days as English `DayOfWeek` names; `DAGNAVN` maps them to Norwegian for display. Week state is local (not in Redux) — navigating away and back resets to the current week.
+
+---
+
+### `components/ukesmeny/MåltidPanel.tsx`
+
+The panel at the bottom of the ukesmeny for editing one måltid. There is no save button — every change is saved immediately:
+- the chosen oppskrifter, each with ✕ to remove and a tap to open the oppskrift
+- a − / + stepper for porsjoner
+- a notat field, saved when you leave it or press Enter
+- a search field to add oppskrifter (already chosen ones are hidden)
+- "Tøm måltid" to clear everything
+
+Every action sends the whole måltid to `PUT …/maltider/{dag}/{maltidstype}` (built by the `lagre` helper from the current state plus the change). The page gives it a `key` per måltid so its local state (search text, notat being typed) resets when you tap a different måltid.
 
 ---
 
@@ -392,7 +406,7 @@ Zod schemas for oppskrifter and ingredienser. `OppskriftSchema` describes the cr
 
 ### `packages/schemas/src/ukesmeny.ts`
 
-Zod schemas for the ukesmeny: `MåltidstypeSchema`, `DayOfWeekSchema` (mirrors .NET's English day names), `AddMåltidRequestSchema`, and the response shapes `MåltidResponseSchema` and `UkesmenyResponseSchema`.
+Zod schemas for the ukesmeny: `MåltidstypeSchema` (incl. Kvelds), `DayOfWeekSchema` (mirrors .NET's English day names), `SaveMåltidRequestSchema`, the response shapes `MåltidResponseSchema` and `UkesmenyResponseSchema`, and the constant `STANDARD_PORSJONER` (2) shared by the grid and the panel.
 
 ---
 
