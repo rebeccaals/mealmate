@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Mealmate.Api.Data;
 using Mealmate.Api.DTOs;
 using Mealmate.Api.Models;
+using Mealmate.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -36,7 +37,7 @@ public class OppskrifterController(AppDbContext db) : ControllerBase
     public async Task<IActionResult> GetOppskrift(Guid id)
     {
         var oppskrift = await db.Oppskrifter
-            .Include(o => o.Ingredienser)
+            .Include(o => o.Ingredienser).ThenInclude(i => i.Butikkvare)
             .Include(o => o.Kategorier)
             .FirstOrDefaultAsync(o => o.Id == id);
 
@@ -63,7 +64,7 @@ public class OppskrifterController(AppDbContext db) : ControllerBase
             TilberedningstidMinutter = request.TilberedningstidMinutter,
             Steg = request.Steg,
             OpprettetAvId = userId,
-            Ingredienser = ToIngredienser(request.Ingredienser),
+            Ingredienser = await ToIngredienser(request.Ingredienser),
             Kategorier = kategorier,
         };
 
@@ -97,7 +98,7 @@ public class OppskrifterController(AppDbContext db) : ControllerBase
         oppskrift.Kategorier = kategorier;
 
         db.Ingredienser.RemoveRange(oppskrift.Ingredienser);
-        oppskrift.Ingredienser = ToIngredienser(request.Ingredienser);
+        oppskrift.Ingredienser = await ToIngredienser(request.Ingredienser);
 
         await db.SaveChangesAsync();
 
@@ -122,13 +123,40 @@ public class OppskrifterController(AppDbContext db) : ControllerBase
         return NoContent();
     }
 
-    private static List<Ingrediens> ToIngredienser(List<IngrediensRequestItem> items) =>
-        items.Select(i => new Ingrediens
+    // Looks up each butikkvare by name (ignoring case) and creates the ones that don't exist yet.
+    // The new butikkvarer are tracked by the DbContext and saved together with the oppskrift.
+    private async Task<List<Ingrediens>> ToIngredienser(List<IngrediensRequestItem> items)
+    {
+        var normaliserte = items.Select(i => ButikkvareNavn.Normalisert(i.ButikkvareNavn)).Distinct().ToList();
+        var butikkvarer = (await db.Butikkvarer
+                .Where(b => normaliserte.Contains(b.Navn.ToLower()))
+                .ToListAsync())
+            .ToDictionary(b => b.Navn.ToLowerInvariant());
+
+        return items.Select((item, index) =>
         {
-            Navn = i.Navn.Trim(),
-            Mengde = i.Mengde,
-            Enhet = i.Enhet.Trim(),
+            var nøkkel = ButikkvareNavn.Normalisert(item.ButikkvareNavn);
+            if (!butikkvarer.TryGetValue(nøkkel, out var butikkvare))
+            {
+                butikkvare = new Butikkvare
+                {
+                    Navn = ButikkvareNavn.Pent(item.ButikkvareNavn),
+                    Avdeling = item.Avdeling ?? Avdeling.Annet,
+                };
+                db.Butikkvarer.Add(butikkvare);
+                butikkvarer[nøkkel] = butikkvare;
+            }
+
+            return new Ingrediens
+            {
+                Rekkefølge = index,
+                Butikkvare = butikkvare,
+                Mengde = item.Mengde,
+                Enhet = item.Enhet,
+                Merknad = string.IsNullOrWhiteSpace(item.Merknad) ? null : item.Merknad.Trim(),
+            };
         }).ToList();
+    }
 
     private static OppskriftDetailDto ToDetailDto(Oppskrift oppskrift) => new(
         oppskrift.Id,
@@ -138,6 +166,9 @@ public class OppskrifterController(AppDbContext db) : ControllerBase
         oppskrift.ForberedelsestidMinutter,
         oppskrift.TilberedningstidMinutter,
         oppskrift.Steg,
-        oppskrift.Ingredienser.Select(i => new IngrediensDto(i.Id, i.Navn, i.Mengde, i.Enhet)).ToList(),
+        oppskrift.Ingredienser
+            .OrderBy(i => i.Rekkefølge)
+            .Select(i => new IngrediensDto(i.Id, i.ButikkvareId, i.Butikkvare.Navn, i.Butikkvare.Avdeling, i.Mengde, i.Enhet, i.Merknad))
+            .ToList(),
         oppskrift.Kategorier.Select(k => new KategoriDto(k.Id, k.Navn)).ToList());
 }

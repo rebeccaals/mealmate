@@ -1,15 +1,27 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useForm, useFieldArray } from 'react-hook-form'
+import { useForm, useFieldArray, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { skipToken } from '@reduxjs/toolkit/query/react'
 import { Plus, Trash2, ChevronUp, ChevronDown, ChevronLeft } from 'lucide-react'
 import { useGetOppskriftQuery, useCreateOppskriftMutation, useUpdateOppskriftMutation } from '@/features/oppskrifter/oppskrifterApi'
 import { useGetKategorierQuery, useCreateKategoriMutation } from '@/features/kategorier/kategorierApi'
+import { useGetButikkvarerQuery } from '@/features/butikkvarer/butikkvarerApi'
+import {
+  AvdelingSchema,
+  finnButikkvare,
+  formatIngrediens,
+  storForbokstav,
+  tolkIngredienslinje,
+  type Butikkvare,
+  type IngrediensRequest,
+} from '@mealmate/schemas'
+import IngrediensLinje from './IngrediensLinje'
 
 // Internal schema — steg stored as { value } objects so useFieldArray can track them.
 // Transformed to plain strings before sending to the API.
+// Ingredienser are free text ("2 ss smør, myk"), interpreted on submit by tolkIngredienslinje.
 const optionalInt = z.union([z.number().int().nonnegative(), z.nan()])
   .transform((v) => (typeof v === 'number' && !isNaN(v) ? v : undefined))
   .optional()
@@ -21,10 +33,18 @@ const FormSchema = z.object({
   forberedelsestidMinutter: optionalInt,
   tilberedningstidMinutter: optionalInt,
   ingredienser: z.array(z.object({
-    navn: z.string().min(1, 'Må fylles ut'),
-    mengde: z.number({ invalid_type_error: 'Må fylles ut' }).positive('Må være > 0'),
-    enhet: z.string().min(1, 'Må fylles ut'),
-  })).min(1, 'Legg til minst én ingrediens'),
+    tekst: z.string(),
+    // Only used when the line's butikkvare doesn't exist yet
+    avdeling: AvdelingSchema.nullable(),
+  }))
+    .superRefine((linjer, ctx) => {
+      linjer.forEach((l, index) => {
+        if (l.tekst.trim() && !tolkIngredienslinje(l.tekst).navn) {
+          ctx.addIssue({ code: 'custom', path: [index, 'tekst'], message: 'Mangler vare, f.eks. «2 ss smør»' })
+        }
+      })
+    })
+    .refine((linjer) => linjer.some((l) => l.tekst.trim()), 'Legg til minst én ingrediens'),
   steg: z.array(z.object({
     value: z.string().min(1, 'Steget kan ikke være tomt'),
   })).min(1, 'Legg til minst ett steg'),
@@ -32,6 +52,20 @@ const FormSchema = z.object({
 })
 
 type FormValues = z.infer<typeof FormSchema>
+
+// An existing butikkvare is referred to by its exact stored name; a new one gets a capital
+// first letter and the chosen avdeling.
+function tilIngrediensRequest(tekst: string, avdeling: IngrediensRequest['avdeling'], butikkvarer: Butikkvare[]): IngrediensRequest {
+  const tolket = tolkIngredienslinje(tekst)
+  const treff = finnButikkvare(tolket.navn, butikkvarer)
+  return {
+    butikkvareNavn: treff?.navn ?? storForbokstav(tolket.navn),
+    avdeling: treff ? null : avdeling,
+    mengde: tolket.mengde,
+    enhet: tolket.enhet,
+    merknad: tolket.merknad,
+  }
+}
 
 const inputClass = 'w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring'
 const errorClass = 'text-xs text-destructive mt-0.5'
@@ -56,13 +90,15 @@ export default function OppskriftForm() {
       tittel: '',
       beskrivelse: '',
       porsjoner: 2,
-      ingredienser: [{ navn: '', mengde: 0, enhet: '' }],
+      ingredienser: [{ tekst: '', avdeling: null }],
       steg: [{ value: '' }],
       kategoriIder: [],
     },
   })
 
-  const { fields: ingrediensFields, append: appendIngrediens, remove: removeIngrediens } = useFieldArray({ control, name: 'ingredienser' })
+  const { fields: ingrediensFields, append: appendIngrediens, insert: insertIngredienser, remove: removeIngrediens } = useFieldArray({ control, name: 'ingredienser' })
+  const ingredienser = useWatch({ control, name: 'ingredienser' })
+  const { data: butikkvarer = [] } = useGetButikkvarerQuery()
   const { fields: stegFields, append: appendSteg, remove: removeSteg, move: moveSteg } = useFieldArray({ control, name: 'steg' })
 
   const valgteKategoriIder = watch('kategoriIder')
@@ -76,7 +112,7 @@ export default function OppskriftForm() {
         porsjoner: existing.porsjoner,
         forberedelsestidMinutter: existing.forberedelsestidMinutter ?? undefined,
         tilberedningstidMinutter: existing.tilberedningstidMinutter ?? undefined,
-        ingredienser: existing.ingredienser.map((i) => ({ navn: i.navn, mengde: i.mengde, enhet: i.enhet })),
+        ingredienser: existing.ingredienser.map((i) => ({ tekst: formatIngrediens(i), avdeling: null })),
         steg: existing.steg.map((value) => ({ value })),
         kategoriIder: existing.kategorier.map((k) => k.id),
       })
@@ -111,7 +147,9 @@ export default function OppskriftForm() {
       porsjoner: data.porsjoner,
       forberedelsestidMinutter: data.forberedelsestidMinutter,
       tilberedningstidMinutter: data.tilberedningstidMinutter,
-      ingredienser: data.ingredienser,
+      ingredienser: data.ingredienser
+        .filter((l) => l.tekst.trim())
+        .map((l) => tilIngrediensRequest(l.tekst, l.avdeling, butikkvarer)),
       steg: data.steg.map((s) => s.value),
       kategoriIder: data.kategoriIder,
     }
@@ -197,56 +235,33 @@ export default function OppskriftForm() {
           {errors.ingredienser?.message && (
             <p className={errorClass}>{errors.ingredienser.message}</p>
           )}
-          <div className="space-y-2">
+          <p className="text-xs text-muted-foreground mb-2">
+            Skriv én ingrediens per linje, f.eks. «2 ss smør» eller «1 løk, finhakket». Enter gir ny linje.
+          </p>
+          <div className="space-y-3">
             {ingrediensFields.map((field, index) => (
-              <div key={field.id} className="flex gap-2 items-start">
-                <div className="flex-1">
-                  <input
-                    placeholder="Navn"
-                    className={inputClass}
-                    {...register(`ingredienser.${index}.navn`)}
-                  />
-                  {errors.ingredienser?.[index]?.navn && (
-                    <p className={errorClass}>{errors.ingredienser[index].navn.message}</p>
-                  )}
-                </div>
-                <div className="w-20">
-                  <input
-                    type="number"
-                    placeholder="Mengde"
-                    min={0}
-                    step="any"
-                    className={inputClass}
-                    {...register(`ingredienser.${index}.mengde`, { valueAsNumber: true })}
-                  />
-                  {errors.ingredienser?.[index]?.mengde && (
-                    <p className={errorClass}>{errors.ingredienser[index].mengde.message}</p>
-                  )}
-                </div>
-                <div className="w-20">
-                  <input
-                    placeholder="Enhet"
-                    className={inputClass}
-                    {...register(`ingredienser.${index}.enhet`)}
-                  />
-                  {errors.ingredienser?.[index]?.enhet && (
-                    <p className={errorClass}>{errors.ingredienser[index].enhet.message}</p>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => removeIngrediens(index)}
-                  disabled={ingrediensFields.length === 1}
-                  className="mt-2 text-muted-foreground hover:text-destructive transition-colors disabled:opacity-30"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
+              <IngrediensLinje
+                key={field.id}
+                tekst={ingredienser?.[index]?.tekst ?? ''}
+                avdeling={ingredienser?.[index]?.avdeling ?? null}
+                butikkvarer={butikkvarer}
+                register={register(`ingredienser.${index}.tekst`)}
+                error={errors.ingredienser?.[index]?.tekst?.message}
+                kanFjernes={ingrediensFields.length > 1}
+                onTekst={(tekst) => setValue(`ingredienser.${index}.tekst`, tekst, { shouldValidate: Boolean(errors.ingredienser) })}
+                onAvdeling={(avdeling) => setValue(`ingredienser.${index}.avdeling`, avdeling)}
+                onFjern={() => removeIngrediens(index)}
+                onNyLinje={() => insertIngredienser(index + 1, { tekst: '', avdeling: null })}
+                onLimInnFlere={([første, ...resten]) => {
+                  setValue(`ingredienser.${index}.tekst`, første)
+                  insertIngredienser(index + 1, resten.map((tekst) => ({ tekst, avdeling: null })))
+                }}
+              />
             ))}
           </div>
           <button
             type="button"
-            onClick={() => appendIngrediens({ navn: '', mengde: 0, enhet: '' })}
+            onClick={() => appendIngrediens({ tekst: '', avdeling: null })}
             className="mt-2 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <Plus size={14} /> Legg til ingrediens

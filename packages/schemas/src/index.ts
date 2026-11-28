@@ -1,4 +1,6 @@
 export * from './auth'
+export * from './butikkvare'
+export * from './ingrediens'
 export * from './kategori'
 export * from './oppskrift'
 export * from './ukesmeny'

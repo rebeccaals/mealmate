@@ -6,7 +6,8 @@
     "build": "pnpm --filter @mealmate/schemas build && pnpm --filter frontend build",
     "type-check": "pnpm --filter @mealmate/schemas type-check && pnpm --filter frontend type-check",
     "docs:dev": "pnpm --filter docs start",
-    "docs:build": "pnpm --filter docs build"
+    "docs:build": "pnpm --filter docs build",
+    "test": "pnpm --filter @mealmate/schemas test"
   },
   "engines": {
     "node": ">=22",

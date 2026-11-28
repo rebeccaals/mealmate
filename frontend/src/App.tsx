@@ -7,6 +7,7 @@ import OppskriftDetailPage from '@/pages/OppskriftDetailPage'
 import OppskriftForm from '@/components/oppskrifter/OppskriftForm'
 import UkesmenyPage from '@/pages/UkesmenyPage'
 import HandlelistePage from '@/pages/HandlelistePage'
+import ButikkvarerPage from '@/pages/ButikkvarerPage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = useAppSelector((state) => state.auth.token)
@@ -32,6 +33,7 @@ export default function App() {
         <Route path="oppskrifter/:id/rediger" element={<OppskriftForm />} />
         <Route path="ukesmeny" element={<UkesmenyPage />} />
         <Route path="handleliste" element={<HandlelistePage />} />
+        <Route path="butikkvarer" element={<ButikkvarerPage />} />
       </Route>
     </Routes>
   )

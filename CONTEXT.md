@@ -18,6 +18,10 @@ _Avoid_: Tag, avdeling
 A butikkvare with an amount and an enhet, as part of an oppskrift, e.g. "2 ss smør". Written as one line of free text and interpreted by the app.
 _Avoid_: Råvare
 
+**Merknad**:
+Free text on an ingrediens describing how it's prepared or chosen, written after the first comma, e.g. "finhakket" in "1 løk, finhakket". Not part of the butikkvare.
+_Avoid_: Kommentar, beskrivelse
+
 **Enhet**:
 One of a fixed set of units (g, kg, ml, dl, l, ts, ss, stk, fedd, pakke, boks, klype). Enheter of the same kind (weight, volume) are converted when summed; different kinds are kept side by side.
 _Avoid_: Måleenhet

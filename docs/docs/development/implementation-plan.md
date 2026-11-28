@@ -246,7 +246,7 @@ Before deploy, while there is no real data. See ADR-005.
 - No secrets in `appsettings.json`: JWT key, connection string and seed passwords live in `appsettings.Development.json` locally and env vars in production; backend refuses to start without `Jwt:Key`
 - Seed passwords from config (`SeedPasswords__Rebecca` / `__Nicolay`) instead of hard-coded `Mealmate1` — so "change password" can stay in step 11
 - nginx re-resolves the backend's private address every 10 s (`resolver` + variable in `proxy_pass`) — found in production: after a backend redeploy, the frontend kept the old IP and `/api` hung until the frontend was restarted
-- Watch Paths only on the backend: on the frontend they made Railway skip every commit (step 8 reached prod only on the backend). Frontend rebuilds on every push
+- Frontend stopped auto-deploying after step 7. First blamed on Watch Paths (removed from frontend), real cause: the Railway GitHub App wasn't installed — Settings showed "Auto deploy unavailable / Could not load branches". Fixed by reconnecting the repo and installing the app
 - PWA without a service worker: manifest + apple-touch-icon is enough for "Legg til på Hjem-skjerm" on iOS
 - Setup guide: [Deploy to Railway](deploy-railway.md) — rewritten step by step after the first real setup (service rename is done by clicking the name at the top of the panel)
 
@@ -282,7 +282,20 @@ From here on, every model change is a normal EF Core migration — never recreat
 
 **Done when:** tirsdag middag can hold kyllinggryte + ris + salat for 4, and onsdag middag can be just "Rester".
 
-## Step 9 — Butikkvarer, avdelinger and ingredient parsing
+## Step 9 — Butikkvarer, avdelinger and ingredient parsing ✅ Done
+
+**Decisions made:**
+- New term **Merknad**: text after the first comma ("1 løk, finhakket") — otherwise pasted recipes would create butikkvarer like "løk, finhakket". A comma between digits is a decimal comma
+- The API takes the butikkvare by **name**, not id: existing ones are reused ignoring case, new ones are created on save with the avdeling picked on the line (default Annet) — no separate "create vare" call
+- Mengde and enhet are both set or both null ("salt og pepper"); amount without enhet → stk; enhet without amount → 1; ranges ("2-3") use the upper value; "en/ei/et" = 1
+- Ingredienser got a `Rekkefølge` column — before, their order wasn't stored at all
+- Unique butikkvare names ignoring case via a `lower("Navn")` index (raw SQL in the migration)
+- Migration keeps existing data: one butikkvare per distinct name (all in Annet), units translated, unknown units → stk with the original text as merknad. Tested up and down against a throwaway Postgres
+- A butikkvare used in an oppskrift can't be deleted, only merged into another
+- "Butikkvarer" page is reached from an icon in the header, not the bottom nav (rarely used)
+- Parser + tests in `packages/schemas` (Vitest), run in CI
+- Adding Vitest broke the frontend Docker build (unpinned pnpm in the image refused esbuild's install script) — fixed by pinning pnpm in the Dockerfile and allowing esbuild via `onlyBuiltDependencies`
+
 
 - `Butikkvare` (name, `Avdeling`), shared by oppskrifter and handleliste. Fixed list of avdelinger.
 - `Ingrediens` = butikkvare + amount + `Enhet` (fixed list: g, kg, ml, dl, l, ts, ss, stk, fedd, pakke, boks, klype).

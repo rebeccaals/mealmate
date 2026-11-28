@@ -13,15 +13,15 @@ export const oppskrifterApi = baseApi.injectEndpoints({
     }),
     createOppskrift: builder.mutation<OppskriftDetail, Omit<Oppskrift, 'id'>>({
       query: (body) => ({ url: 'oppskrifter', method: 'POST', body }),
-      invalidatesTags: ['Oppskrift'],
+      invalidatesTags: ['Oppskrift', 'Butikkvare'],
     }),
     updateOppskrift: builder.mutation<OppskriftDetail, { id: string; body: Omit<Oppskrift, 'id'> }>({
       query: ({ id, body }) => ({ url: `oppskrifter/${id}`, method: 'PUT', body }),
-      invalidatesTags: (_result, _error, { id }) => ['Oppskrift', { type: 'Oppskrift', id }],
+      invalidatesTags: (_result, _error, { id }) => ['Oppskrift', { type: 'Oppskrift', id }, 'Butikkvare'],
     }),
     deleteOppskrift: builder.mutation<void, string>({
       query: (id) => ({ url: `oppskrifter/${id}`, method: 'DELETE' }),
-      invalidatesTags: ['Oppskrift'],
+      invalidatesTags: ['Oppskrift', 'Butikkvare'],
     }),
   }),
 })

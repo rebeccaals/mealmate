@@ -24,6 +24,9 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - name: Test schemas (ingredient parser)
+        run: pnpm --filter @mealmate/schemas test
+
       - name: Type check
         run: pnpm --filter frontend type-check
 

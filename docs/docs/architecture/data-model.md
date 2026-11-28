@@ -21,8 +21,14 @@ Oppskrift
   kategorier[] ↔ Kategori (many-to-many, join table KategoriOppskrift)
 
 Ingrediens
-  id, navn, mengde, enhet
+  id, rekkefølge
+  butikkvareId → Butikkvare
+  mengde?, enhet? (g|kg|ml|dl|l|ts|ss|stk|fedd|pakke|boks|klype — both set or both null)
+  merknad? (max 200)
   oppskriftId → Oppskrift
+
+Butikkvare
+  id, navn (unique ignoring case), avdeling (FruktOgGrønt|Brød|KjøttOgFisk|Meieri|Tørrvarer|Frys|Drikke|Husholdning|Annet)
 
 Kategori
   id, navn
@@ -41,5 +47,4 @@ Måltid
 
 ## Planned changes
 
-- **Step 9:** `Butikkvare` (navn, avdeling); `Ingrediens` points to a butikkvare and uses a fixed `Enhet`.
 - **Step 10:** one shared `Handleliste` with `Vare` and `Kilde` — see [ADR-006](../decisions/adr-006-one-shared-handleliste.md).

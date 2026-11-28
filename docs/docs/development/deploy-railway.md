@@ -126,7 +126,7 @@ Leave **Settings → Networking → Public Networking** alone — **don't** clic
 
 *Watch Paths* tell Railway which files matter for a service, so commits that don't touch them are skipped. **Backend:** **Settings → Watch Paths** → `/backend/**` — this works.
 
-**Frontend: no Watch Paths.** We tried `/frontend/**`, `/packages/**`, `/package.json`, `/pnpm-lock.yaml`, `/pnpm-workspace.yaml`, but Railway then skipped *every* frontend commit (step 8 never reached production while the backend did). Without Watch Paths the frontend is rebuilt on every push, including docs-only commits — a small cost, but it can never fall behind the backend. Revisit only if someone finds out why the patterns didn't match.
+**Frontend: no Watch Paths for now.** The frontend once stopped deploying, and Watch Paths were suspected and removed — but the real cause was the missing GitHub App (see Troubleshooting). The patterns `/frontend/**`, `/packages/**`, `/package.json`, `/pnpm-lock.yaml`, `/pnpm-workspace.yaml` can probably be added back; check afterwards that a frontend-only commit still deploys.
 
 To deploy a service manually: change any setting → click **Deploy** in the bar at the top. (The ⋮ → **Redeploy** on an old deployment rebuilds *that* old commit, not the newest one.)
 
@@ -140,6 +140,7 @@ To deploy a service manually: change any setting → click **Deploy** in the bar
 
 - **Backend crashes with `Jwt:Key is required`** or **`SeedPasswords:… is required`** → a variable is missing on the backend service.
 - **Login returns 502 / "Bad Gateway"** → nginx can't reach the backend. Check that the backend service is named `backend`, is running, and that `BACKEND_URL` is set on the frontend.
+- **A service doesn't deploy on push** → open the service's **Settings → Source**. If it says **"Auto deploy unavailable"** / **"Could not load branches"**, Railway can't reach the repo: the **Railway GitHub App** must be installed (GitHub → Settings → Applications → *Installed GitHub Apps*). Fix: **Disconnect** the source repo → **Connect Repo** → install/configure the GitHub App with access to `mealmate` → pick the repo again, check the branch is `main`. Variables and domain stay. (Logging in to Railway with GitHub is a different thing — an *OAuth app* — and is not enough.)
 - **A feature works locally but not in production** → check that *both* services deployed the latest commit (each service → **Deployments**, look at the commit message).
 - **Pages stuck on "Laster…" after a backend deploy** → nginx is using the backend's old address. Fixed in the nginx config (it re-resolves every 10 s); if it ever happens again, **Restart** the frontend deployment as a quick fix.
 - **Logs:** click a service → **Deployments** → the latest deployment → **View logs**.

@@ -1,6 +1,7 @@
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { ChevronLeft, Clock, Users, Pencil, Trash2 } from 'lucide-react'
 import { useGetOppskriftQuery, useDeleteOppskriftMutation } from '@/features/oppskrifter/oppskrifterApi'
+import { formatMengde } from '@mealmate/schemas'
 
 export default function OppskriftDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -91,10 +92,15 @@ export default function OppskriftDetailPage() {
         <ul className="space-y-1.5">
           {oppskrift.ingredienser.map((i) => (
             <li key={i.id} className="flex items-baseline gap-2 text-sm">
-              <span className="font-medium tabular-nums">
-                {i.mengde} {i.enhet}
+              {i.mengde !== null && (
+                <span className="font-medium tabular-nums">
+                  {formatMengde(i.mengde)}{i.enhet && i.enhet !== 'stk' ? ` ${i.enhet}` : ''}
+                </span>
+              )}
+              <span>
+                {i.navn}
+                {i.merknad && <span className="text-muted-foreground">, {i.merknad}</span>}
               </span>
-              <span>{i.navn}</span>
             </li>
           ))}
         </ul>

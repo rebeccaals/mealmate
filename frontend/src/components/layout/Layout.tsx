@@ -1,5 +1,5 @@
-import { Outlet, NavLink } from 'react-router-dom'
-import { BookOpen, CalendarDays, ShoppingCart, LogOut } from 'lucide-react'
+import { Outlet, NavLink, Link } from 'react-router-dom'
+import { BookOpen, CalendarDays, ShoppingCart, LogOut, Store } from 'lucide-react'
 import { useAppDispatch } from '@/app/hooks'
 import { logout } from '@/features/auth/authSlice'
 
@@ -10,6 +10,15 @@ export default function Layout() {
     <div className="flex flex-col min-h-screen">
       <header className="border-b bg-card px-4 py-3 flex items-center justify-between">
         <span className="font-semibold text-lg">mealmate</span>
+        <div className="flex items-center gap-4">
+        <Link
+          to="/butikkvarer"
+          className="text-muted-foreground hover:text-foreground transition-colors"
+          aria-label="Butikkvarer"
+          title="Butikkvarer"
+        >
+          <Store size={18} />
+        </Link>
         <button
           onClick={() => dispatch(logout())}
           className="text-muted-foreground hover:text-foreground transition-colors"
@@ -17,6 +26,7 @@ export default function Layout() {
         >
           <LogOut size={18} />
         </button>
+        </div>
       </header>
 
       <main className="flex-1 p-4">

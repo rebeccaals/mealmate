@@ -106,27 +106,56 @@ namespace Mealmate.Api.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("Mealmate.Api.Models.Butikkvare", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Avdeling")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("Navn")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Butikkvarer");
+                });
+
             modelBuilder.Entity("Mealmate.Api.Models.Ingrediens", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Enhet")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<Guid>("ButikkvareId")
+                        .HasColumnType("uuid");
 
-                    b.Property<decimal>("Mengde")
+                    b.Property<string>("Enhet")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<decimal?>("Mengde")
                         .HasColumnType("numeric");
 
-                    b.Property<string>("Navn")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<string>("Merknad")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.Property<Guid>("OppskriftId")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("Rekkefølge")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("ButikkvareId");
 
                     b.HasIndex("OppskriftId");
 
@@ -396,11 +425,19 @@ namespace Mealmate.Api.Migrations
 
             modelBuilder.Entity("Mealmate.Api.Models.Ingrediens", b =>
                 {
+                    b.HasOne("Mealmate.Api.Models.Butikkvare", "Butikkvare")
+                        .WithMany("Ingredienser")
+                        .HasForeignKey("ButikkvareId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("Mealmate.Api.Models.Oppskrift", "Oppskrift")
                         .WithMany("Ingredienser")
                         .HasForeignKey("OppskriftId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Butikkvare");
 
                     b.Navigation("Oppskrift");
                 });
@@ -491,6 +528,11 @@ namespace Mealmate.Api.Migrations
                         .HasForeignKey("OppskriftId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Mealmate.Api.Models.Butikkvare", b =>
+                {
+                    b.Navigation("Ingredienser");
                 });
 
             modelBuilder.Entity("Mealmate.Api.Models.Oppskrift", b =>

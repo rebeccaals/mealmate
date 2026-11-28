@@ -1,5 +1,6 @@
 FROM node:22-alpine AS builder
-RUN npm install -g pnpm
+# Same pnpm version as locally, so a new pnpm release can't change how the build behaves
+RUN npm install -g pnpm@10.29.3
 
 WORKDIR /app
 

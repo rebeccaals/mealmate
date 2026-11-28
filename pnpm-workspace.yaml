@@ -2,3 +2,8 @@ packages:
   - 'packages/*'
   - 'frontend'
   - 'docs'
+
+# Packages allowed to run install scripts. esbuild (pulled in by Vite/Vitest) uses one to
+# set up its native binary; without this, newer pnpm versions stop the install.
+onlyBuiltDependencies:
+  - esbuild

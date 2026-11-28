@@ -44,7 +44,7 @@ There's no separate "add"/"remove" endpoint: the frontend always sends the compl
 Full CRUD for oppskrifter, all endpoints requiring a valid JWT:
 - `GET /api/oppskrifter` (`GetOppskrifter`) — list all oppskrifter (tittel, beskrivelse, kategorier, porsjoner/time info — no ingredienser)
 - `GET /api/oppskrifter/{id}` (`GetOppskrift`) — full oppskrift including ingredienser and steg
-- `POST /api/oppskrifter` (`CreateOppskrift`) — creates an oppskrift; records `OpprettetAvId` from the JWT
+- `POST /api/oppskrifter` (`CreateOppskrift`) — creates an oppskrift; records `OpprettetAvId` from the JWT. Each ingrediens' butikkvare is looked up by name (ignoring case) and created if it doesn't exist (`ToIngredienser`)
 - `PUT /api/oppskrifter/{id}` (`UpdateOppskrift`) — full replace; old ingredienser are deleted and recreated from the request
 - `DELETE /api/oppskrifter/{id}` (`DeleteOppskrift`) — deletes the oppskrift and cascades to its ingredienser. It's also removed from any måltider; måltider left with no oppskrifter and no notat are deleted
 
@@ -66,7 +66,7 @@ Validates kategori create/update requests — `Navn` must not be empty and must 
 
 ### `Validators/OppskriftRequestValidator.cs`
 
-Validates oppskrift create/update requests — tittel not empty, porsjoner positive, at least one ingrediens (each with navn/mengde/enhet), at least one steg.
+Validates oppskrift create/update requests — tittel not empty, porsjoner positive, at least one ingrediens (each with a butikkvare name; mengde > 0 if given; mengde and enhet either both set or both missing; merknad max 200), at least one steg.
 
 FluentValidation validators registered in `Program.cs` via `AddValidatorsFromAssemblyContaining<Program>()` — they run automatically before the controller method is called, returning a 400 if validation fails.
 
@@ -75,6 +75,12 @@ FluentValidation validators registered in `Program.cs` via `AddValidatorsFromAss
 ### `Validators/SaveMåltidRequestValidator.cs`
 
 Validates a måltid save — porsjoner between 1 and 50, notat at most 200 characters, `OppskriftIder` present (may be empty).
+
+---
+
+### `Validators/ButikkvareRequestValidators.cs`
+
+Two small validators for the butikkvarer API: bulk create (at least one name, each max 100 characters, valid avdeling) and update (name not empty, valid avdeling).
 
 ---
 
@@ -94,6 +100,14 @@ Data shapes for the kategorier API: `KategoriDto` (what the API returns) and `Ka
 
 Data shapes for the oppskrifter API: `OppskriftListDto`, `OppskriftDetailDto`, `IngrediensDto`, `OppskriftRequest`, and `IngrediensRequestItem`. The list and detail DTOs are different shapes — the list omits ingredienser to keep the response light.
 
+`IngrediensRequestItem` names the butikkvare by **name** (`ButikkvareNavn`) rather than id, plus an `Avdeling` that's only used if that butikkvare has to be created. `IngrediensDto` returns the butikkvare's name and avdeling alongside mengde, enhet and merknad.
+
+---
+
+### `DTOs/ButikkvareDtos.cs`
+
+Data shapes for the butikkvarer API: `ButikkvareDto` (incl. `AntallOppskrifter` — how many oppskrifter use it), `CreateButikkvarerRequest` (several names + one avdeling), `UpdateButikkvareRequest` and `SlåSammenRequest` (which butikkvare to merge into).
+
 ---
 
 ### `Controllers/KategorierController.cs`
@@ -103,6 +117,23 @@ Full CRUD for kategorier, all endpoints requiring a valid JWT:
 - `POST /api/kategorier` — creates a kategori; validates navn via FluentValidation
 - `PUT /api/kategorier/{id}` — renames a kategori; returns 404 if not found
 - `DELETE /api/kategorier/{id}` — deletes a kategori; returns 409 Conflict if any oppskrifter use it
+
+---
+
+### `Controllers/ButikkvarerController.cs`
+
+The butikkvare register:
+- `GET /api/butikkvarer` — all butikkvarer, alphabetically, with how many oppskrifter use each
+- `POST /api/butikkvarer` — bulk create from a list of names; names that already exist (ignoring case) are skipped
+- `PUT /api/butikkvarer/{id}` — rename and/or change avdeling; 409 if another butikkvare already has the name
+- `DELETE /api/butikkvarer/{id}` — 409 if any oppskrift uses it
+- `POST /api/butikkvarer/{id}/sla-sammen` — merge a duplicate into another: moves every ingrediens over, then deletes the duplicate
+
+---
+
+### `Services/ButikkvareNavn.cs`
+
+The name rules for butikkvarer, shared by both controllers: `Pent` ("  smør  usaltet " → "Smør usaltet", how names are stored) and `Normalisert` (lowercase, what names are compared by). They mirror `normaliserNavn` / `storForbokstav` in `packages/schemas/src/ingrediens.ts`, so the frontend and backend agree on when two names are "the same".
 
 ---
 
@@ -141,7 +172,15 @@ The core domain model. An oppskrift has:
 
 ### `Models/Ingrediens.cs`
 
-A single ingrediens line on an oppskrift: a `Navn`, a `Mengde`, and an `Enhet` (e.g. "Pasta — 200 — g"). Always belongs to exactly one oppskrift via `OppskriftId`. Has no independent existence outside an oppskrift.
+One line in an oppskrift: a `Butikkvare` plus `Mengde`, `Enhet` and `Merknad` (e.g. "2 ss smør, myk"). `Mengde`/`Enhet` are both null for things like "salt og pepper". `Rekkefølge` keeps the order the lines were written in. Always belongs to exactly one oppskrift.
+
+Also defines the `Enhet` enum (g, kg, ml, dl, l, ts, ss, stk, fedd, pakke, boks, klype). `[JsonStringEnumMemberName("ss")]` makes the API send lowercase ("ss") while C# uses `Ss`; the database stores the C# name.
+
+---
+
+### `Models/Butikkvare.cs`
+
+Something you buy, without an amount: `Navn` (unique ignoring case) and `Avdeling` — where in the store it is. Shared by all oppskrifter, and later the handleliste. Also defines the `Avdeling` enum; stored as text in the database.
 
 ---
 
@@ -195,7 +234,7 @@ Builds the backend in two stages: the .NET SDK image compiles and publishes the 
 
 Auto-generated files created by the `dotnet ef migrations add` command. You never edit these by hand. Each migration file describes exactly what SQL to run to update the database schema.
 
-Usually you never edit these by hand — but a generated migration can lose data when it restructures tables. `MaltidMedFlereOppskrifter` was edited on purpose: it copies each måltid's old single `OppskriftId` into the new `MåltidOppskrift` table *before* dropping the column, and gives existing måltider 2 porsjoner instead of 0. Always read the generated migration when EF warns "may result in the loss of data".
+Usually you never edit these by hand — but a generated migration can lose data when it restructures tables. `MaltidMedFlereOppskrifter` was edited on purpose: it copies each måltid's old single `OppskriftId` into the new `MåltidOppskrift` table *before* dropping the column, and gives existing måltider 2 porsjoner instead of 0. `Butikkvarer` was edited the same way: it creates one butikkvare per distinct ingredient name, links every ingrediens to it, translates free-text units ("gram", "båter") to the fixed enheter (unknown ones become stk with the original text as merknad), and adds a case-insensitive unique index with raw SQL. Always read the generated migration when EF warns "may result in the loss of data".
 
 `AppDbContextModelSnapshot.cs` is a snapshot of the current schema — EF Core uses it to figure out what's changed since the last migration.
 
@@ -268,7 +307,7 @@ Manages authentication state in Redux. Stores the JWT token and the current user
 ### `components/layout/Layout.tsx`
 
 The app shell that wraps all authenticated pages. Renders:
-- A **header** at the top with the app name and a logout button
+- A **header** at the top with the app name, a shop icon linking to Butikkvarer, and a logout button
 - A **`<main>`** area in the middle where the current page renders (via `<Outlet />`)
 - A **bottom navigation bar** with links to Oppskrifter, Ukesmeny, and Handleliste
 
@@ -336,7 +375,7 @@ The oppskrift list. Shows all oppskrifter as cards (tittel, beskrivelse snippet,
 
 ### `pages/OppskriftDetailPage.tsx`
 
-Full oppskrift view: tittel, beskrivelse, porsjoner, times, kategorier, ingrediensliste, and numbered steg ("Fremgangsmåte"). Has Rediger (navigates to `/oppskrifter/:id/rediger`) and Slett (with confirmation dialog) buttons.
+Full oppskrift view: tittel, beskrivelse, porsjoner, times, kategorier, ingrediensliste (mengde with decimal comma via `formatMengde`, "stk" left out, merknad in grey), and numbered steg ("Fremgangsmåte"). Has Rediger (navigates to `/oppskrifter/:id/rediger`) and Slett (with confirmation dialog) buttons.
 
 ---
 
@@ -346,9 +385,27 @@ Used for both creating (`/oppskrifter/ny`) and editing (`/oppskrifter/:id/redige
 
 Key parts:
 - Basic fields (tittel, beskrivelse, porsjoner, forberedelse/tilberedning in minutes)
-- **Ingredienser** — dynamic list using React Hook Form's `useFieldArray`; each row has navn, mengde, enhet, and a remove button
+- **Ingredienser** — one free-text line each (`{ tekst, avdeling }`), rendered by `IngrediensLinje`. Enter inserts a new line below; pasting several lines splits them into rows. When editing, existing ingredienser are turned back into text with `formatIngrediens`. On submit, `tilIngrediensRequest` parses each line and sends the butikkvare by name (the exact stored name if it matched, otherwise capitalised with the chosen avdeling). Blank lines are ignored; a line with only an amount gets an error.
 - **Steg** — dynamic list with up/down reorder buttons and remove; stored internally as `{ value }` objects (React Hook Form requires objects for field arrays), transformed to plain strings on submit
 - **Kategorier** — toggle buttons for existing kategorier; inline "Ny kategori" input that immediately calls `POST /api/kategorier` and adds the new ID to the selection
+
+---
+
+### `components/oppskrifter/IngrediensLinje.tsx`
+
+One ingredient line in the form. You type "2 ss smør, myk" and right below it the app shows what it understood as small chips: **2** · **ss** · **Smør ✓** · *myk*. If the name doesn't match a butikkvare exactly, it shows "Ny vare: «…»" with an avdeling picker, and "Mente du:" buttons for close matches — tapping one swaps the name but keeps amount, enhet and merknad. Handles Enter (new line) and multi-line paste (handed back to the form to split into rows).
+
+---
+
+### `pages/ButikkvarerPage.tsx`
+
+The butikkvare register, reached from the shop icon in the header. Butikkvarer are grouped by avdeling with a search field. On each row the avdeling can be changed directly (the common job after the migration put everything in "Annet"); the arrow opens rename, "Slå sammen med…" and delete (only when no oppskrift uses it). At the top, a textarea adds many butikkvarer at once — one per line, all in the chosen avdeling.
+
+---
+
+### `features/butikkvarer/butikkvarerApi.ts`
+
+RTK Query endpoints for butikkvarer: `useGetButikkvarerQuery`, `useCreateButikkvarerMutation` (bulk), `useUpdateButikkvareMutation`, `useDeleteButikkvareMutation`, `useSlåSammenButikkvarerMutation`. Renames and merges also invalidate `Oppskrift`, since butikkvare names are shown inside oppskrifter; saving an oppskrift invalidates `Butikkvare`, since it may have created new ones.
 
 ---
 
@@ -374,7 +431,7 @@ Makes the app installable as a PWA: name, start URL, `display: standalone` (open
 
 ### `frontend/nginx.conf.template` and `frontend/Dockerfile`
 
-In production (and with `docker compose`) the frontend is served by nginx, not Vite. The Dockerfile builds the React app with pnpm, then copies the result into an nginx image.
+In production (and with `docker compose`) the frontend is served by nginx, not Vite. The Dockerfile builds the React app with pnpm, then copies the result into an nginx image. pnpm is pinned to the same version used locally (`pnpm@10.29.3`) — an unpinned `npm install -g pnpm` once picked up a newer pnpm that refused to install because of an unapproved build script. Packages allowed to run install scripts (currently `esbuild`) are listed under `onlyBuiltDependencies` in `pnpm-workspace.yaml`.
 
 `nginx.conf.template` is a *template*: when the container starts, the nginx image replaces `${PORT}` and `${BACKEND_URL}` with environment variables. Locally they default to port 80 and `http://backend:5001` (the backend's name in docker compose). On Railway, `PORT` is set automatically and `BACKEND_URL` points at the backend's private address. Requests to `/api/` are forwarded to the backend; everything else gets `index.html` so React Router can handle the URL.
 
@@ -402,7 +459,30 @@ Zod schemas for authentication:
 
 ### `packages/schemas/src/oppskrift.ts`
 
-Zod schemas for oppskrifter and ingredienser. `OppskriftSchema` describes the create/edit request; `OppskriftListItemSchema` and `OppskriftDetailSchema` describe what the API returns.
+Zod schemas for oppskrifter and ingredienser. `OppskriftSchema` describes the create/edit request, with `IngrediensRequestSchema` (butikkvare by name + optional avdeling, mengde, enhet, merknad); `OppskriftListItemSchema`, `OppskriftDetailSchema` and `IngrediensResponseSchema` describe what the API returns.
+
+---
+
+### `packages/schemas/src/ingrediens.ts`
+
+The ingredient "brain", shared by every part of the frontend that deals with ingredienser:
+- `ENHETER` / `AVDELINGER` (+ `AVDELINGSNAVN` for display) — the fixed lists
+- `tolkIngredienslinje("2 ss smør, myk")` → `{ mengde: 2, enhet: 'ss', navn: 'smør', merknad: 'myk' }`. Understands decimal commas, fractions (1/2, ½, 1 1/2), ranges (2-3 → 3), numbers glued to units (200g), written-out units (spiseskje, gram, båter), "en/ei/et" as 1, and list bullets from pasted recipes
+- `formatIngrediens` / `formatMengde` — back to text ("2 ss Smør, myk", "0,5")
+- `finnButikkvare` / `foreslåButikkvarer` — exact match and "Mente du" suggestions
+- `normaliserNavn` / `storForbokstav` — the same name rules as `Services/ButikkvareNavn.cs` in the backend
+
+---
+
+### `packages/schemas/src/ingrediens.test.ts`
+
+Vitest tests for the parser — every format above, plus "formatting then parsing gives the same result". Run with `pnpm test` from the repo root; CI runs them on every push. This is where to add a case when the parser misreads something you typed.
+
+---
+
+### `packages/schemas/src/butikkvare.ts`
+
+Zod schemas for butikkvarer: `ButikkvareSchema` (with `antallOppskrifter`), and the bulk-create and update requests.
 
 ---
 

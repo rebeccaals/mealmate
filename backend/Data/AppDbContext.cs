@@ -12,6 +12,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<Kategori> Kategorier => Set<Kategori>();
     public DbSet<Ukesmeny> Ukesmenyer => Set<Ukesmeny>();
     public DbSet<Måltid> Måltider => Set<Måltid>();
+    public DbSet<Butikkvare> Butikkvarer => Set<Butikkvare>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -20,6 +21,22 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
         builder.Entity<Oppskrift>()
             .HasMany(o => o.Kategorier)
             .WithMany(k => k.Oppskrifter);
+
+        // Butikkvare names are unique ignoring case — enforced by a lower("Navn") index created in the
+        // migration (EF can't express expression indexes), and by the controllers comparing lowercase.
+        builder.Entity<Butikkvare>(b =>
+        {
+            b.Property(x => x.Navn).HasMaxLength(100);
+            b.Property(x => x.Avdeling).HasConversion<string>().HasMaxLength(30);
+        });
+
+        builder.Entity<Ingrediens>(i =>
+        {
+            i.Property(x => x.Enhet).HasConversion<string>().HasMaxLength(10);
+            i.Property(x => x.Merknad).HasMaxLength(200);
+            // A butikkvare that is used in an oppskrift can't be deleted (merge it instead)
+            i.HasOne(x => x.Butikkvare).WithMany(b => b.Ingredienser).OnDelete(DeleteBehavior.Restrict);
+        });
 
         // One måltid per dag + måltidstype in an ukesmeny
         builder.Entity<Måltid>()
